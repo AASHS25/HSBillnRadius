@@ -13,6 +13,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/audit"
 	"github.com/aashs25/hsbillnradius/internal/domain/billing"
 	"github.com/aashs25/hsbillnradius/internal/domain/customer"
+	"github.com/aashs25/hsbillnradius/internal/domain/notification"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	repo "github.com/aashs25/hsbillnradius/internal/ports/repo"
 )
@@ -30,11 +31,17 @@ type Isolator interface {
 	Isolate(ctx context.Context, tenantID int64, username, isolirGroup string) error
 }
 
+// Notifier enqueues a notification (optional integration).
+type Notifier interface {
+	Enqueue(ctx context.Context, job notification.Job) error
+}
+
 // Service provides billing operations.
 type Service struct {
 	repos    repo.Repositories
 	tx       repo.TxManager
 	restorer Restorer
+	notifier Notifier
 	log      *slog.Logger
 	now      func() time.Time
 }
@@ -42,6 +49,12 @@ type Service struct {
 // New builds a billing Service. restorer may be nil (RADIUS restore skipped).
 func New(repos repo.Repositories, tx repo.TxManager, restorer Restorer, log *slog.Logger) *Service {
 	return &Service{repos: repos, tx: tx, restorer: restorer, log: log, now: time.Now}
+}
+
+// WithNotifier attaches a notifier so payments enqueue a "paid" message.
+func (s *Service) WithNotifier(n Notifier) *Service {
+	s.notifier = n
+	return s
 }
 
 // GenerateMonthly creates (idempotently) the invoice covering the month that
@@ -184,6 +197,24 @@ func (s *Service) PayInvoice(ctx context.Context, tenantID, invoiceID, actorID i
 	if s.restorer != nil && hasPlan && cust.PppoeUsername != "" {
 		if err := s.restorer.Restore(ctx, tenantID, cust.PppoeUsername, p.GroupName()); err != nil {
 			s.log.WarnContext(ctx, "radius restore after payment failed", slog.Any("error", err))
+		}
+	}
+
+	// Notify the customer that their payment was received (best effort).
+	if s.notifier != nil && cust.PhoneWA != "" {
+		if err := s.notifier.Enqueue(ctx, notification.Job{
+			TenantID:    tenantID,
+			Channel:     notification.ChannelWA,
+			To:          cust.PhoneWA,
+			TemplateKey: "paid",
+			Vars: map[string]string{
+				"nama":       cust.Name,
+				"tagihan":    strconv.FormatInt(payment.AmountIDR, 10),
+				"invoice_no": fmt.Sprintf("manual-inv-%d", invoiceID),
+			},
+			DedupKey: fmt.Sprintf("paid-inv-%d", invoiceID),
+		}); err != nil {
+			s.log.WarnContext(ctx, "enqueue paid notification failed", slog.Any("error", err))
 		}
 	}
 	return payment, nil

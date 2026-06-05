@@ -2,12 +2,14 @@ package memrepo
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/aashs25/hsbillnradius/internal/domain/audit"
 	"github.com/aashs25/hsbillnradius/internal/domain/billing"
 	"github.com/aashs25/hsbillnradius/internal/domain/customer"
 	"github.com/aashs25/hsbillnradius/internal/domain/iam"
+	"github.com/aashs25/hsbillnradius/internal/domain/notification"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/radius"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
@@ -882,4 +884,117 @@ func (r *billingRepo) Outstanding(_ context.Context, tenantID int64) (int64, err
 		}
 	}
 	return total, nil
+}
+
+// --- notifications ----------------------------------------------------------
+
+type notificationRepo struct{ s *Store }
+
+func tkey(tenantID int64, key string, ch notification.Channel) string {
+	return fmt.Sprintf("%d|%s|%s", tenantID, key, ch)
+}
+
+func (r *notificationRepo) Enqueue(_ context.Context, job notification.Job) (bool, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	if r.s.dedup[job.DedupKey] {
+		return false, nil
+	}
+	r.s.dedup[job.DedupKey] = true
+	id := r.s.next("notif")
+	r.s.notifs[id] = notification.Log{
+		ID: id, TenantID: job.TenantID, Channel: job.Channel, To: job.To,
+		TemplateKey: job.TemplateKey, Vars: job.Vars, DedupKey: job.DedupKey,
+		Status: notification.StatusQueued,
+	}
+	r.s.notifStat[id] = notification.StatusQueued
+	return true, nil
+}
+
+func (r *notificationRepo) ClaimDue(_ context.Context, limit int32, _ time.Time) ([]notification.Log, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []notification.Log
+	for id, l := range r.s.notifs {
+		if r.s.notifStat[id] == notification.StatusQueued {
+			l.Attempts++
+			r.s.notifs[id] = l
+			out = append(out, l)
+			if int32(len(out)) >= limit {
+				break
+			}
+		}
+	}
+	return out, nil
+}
+
+func (r *notificationRepo) MarkSent(_ context.Context, id int64, providerRef string) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	r.s.notifStat[id] = notification.StatusSent
+	if l, ok := r.s.notifs[id]; ok {
+		l.Status, l.ProviderRef = notification.StatusSent, providerRef
+		r.s.notifs[id] = l
+	}
+	return nil
+}
+
+func (r *notificationRepo) Retry(_ context.Context, id int64, errMsg string, _ time.Time) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	r.s.notifStat[id] = notification.StatusQueued
+	if l, ok := r.s.notifs[id]; ok {
+		l.Error = errMsg
+		r.s.notifs[id] = l
+	}
+	return nil
+}
+
+func (r *notificationRepo) Fail(_ context.Context, id int64, errMsg string) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	r.s.notifStat[id] = notification.StatusFailed
+	if l, ok := r.s.notifs[id]; ok {
+		l.Status, l.Error = notification.StatusFailed, errMsg
+		r.s.notifs[id] = l
+	}
+	return nil
+}
+
+func (r *notificationRepo) ActiveGateway(_ context.Context, tenantID int64) (notification.Gateway, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	g, ok := r.s.gateways[tenantID]
+	if !ok || !g.IsActive {
+		return notification.Gateway{}, notification.ErrNoGateway
+	}
+	return g, nil
+}
+
+func (r *notificationRepo) Template(_ context.Context, tenantID int64, key string, ch notification.Channel) (notification.Template, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	t, ok := r.s.templates[tkey(tenantID, key, ch)]
+	if !ok || !t.IsActive {
+		return notification.Template{}, notification.ErrNoTemplate
+	}
+	return t, nil
+}
+
+func (r *notificationRepo) UpsertTemplate(_ context.Context, t notification.Template) (notification.Template, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	if t.ID == 0 {
+		t.ID = r.s.next("template")
+	}
+	r.s.templates[tkey(t.TenantID, t.Key, t.Channel)] = t
+	return t, nil
+}
+
+func (r *notificationRepo) CreateGateway(_ context.Context, g notification.Gateway) (notification.Gateway, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	g.ID = r.s.next("gateway")
+	r.s.gateways[g.TenantID] = g
+	return g, nil
 }

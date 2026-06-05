@@ -12,6 +12,9 @@ import (
 
 type Querier interface {
 	AddRolePermission(ctx context.Context, arg AddRolePermissionParams) error
+	// Atomically lease up to $1 due rows (bump next_attempt_at to the lease and
+	// increment attempts) so concurrent workers don't double-process.
+	ClaimDueNotifications(ctx context.Context, arg ClaimDueNotificationsParams) ([]ClaimDueNotificationsRow, error)
 	CountCustomersByTenant(ctx context.Context, tenantID int64) (int64, error)
 	CountPlansByTenant(ctx context.Context, tenantID int64) (int64, error)
 	CountUsersByTenant(ctx context.Context, tenantID int64) (int64, error)
@@ -32,6 +35,9 @@ type Querier interface {
 	DeleteRadGroupReplyByGroup(ctx context.Context, arg DeleteRadGroupReplyByGroupParams) error
 	DeleteRadReplyByUser(ctx context.Context, arg DeleteRadReplyByUserParams) error
 	DeleteRadUserGroupByUser(ctx context.Context, arg DeleteRadUserGroupByUserParams) error
+	EnqueueNotification(ctx context.Context, arg EnqueueNotificationParams) (int64, error)
+	FailNotification(ctx context.Context, arg FailNotificationParams) error
+	GetActiveGateway(ctx context.Context, tenantID int64) (WaGateway, error)
 	GetBandwidthProfileByPlan(ctx context.Context, planID int64) (BandwidthProfile, error)
 	GetCustomerByID(ctx context.Context, arg GetCustomerByIDParams) (Customer, error)
 	GetInvoiceByID(ctx context.Context, arg GetInvoiceByIDParams) (Invoice, error)
@@ -41,6 +47,7 @@ type Querier interface {
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleByName(ctx context.Context, arg GetRoleByNameParams) (Role, error)
+	GetTemplate(ctx context.Context, arg GetTemplateParams) (MessageTemplate, error)
 	GetTenantByDomain(ctx context.Context, domain pgtype.Text) (Tenant, error)
 	GetTenantByID(ctx context.Context, id int64) (Tenant, error)
 	GetTenantBySlug(ctx context.Context, slug string) (Tenant, error)
@@ -64,6 +71,7 @@ type Querier interface {
 	ListInvoicesByCustomer(ctx context.Context, arg ListInvoicesByCustomerParams) ([]Invoice, error)
 	ListInvoicesByTenant(ctx context.Context, arg ListInvoicesByTenantParams) ([]Invoice, error)
 	ListNasByTenant(ctx context.Context, tenantID int64) ([]Na, error)
+	ListNotifications(ctx context.Context, arg ListNotificationsParams) ([]NotificationLog, error)
 	ListPaymentsByTenant(ctx context.Context, arg ListPaymentsByTenantParams) ([]Payment, error)
 	ListPermissionCodesByRole(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionIDsByCodes(ctx context.Context, dollar_1 []string) ([]int64, error)
@@ -76,7 +84,9 @@ type Querier interface {
 	ListRolesByTenant(ctx context.Context, tenantID int64) ([]Role, error)
 	ListUsersByTenant(ctx context.Context, arg ListUsersByTenantParams) ([]User, error)
 	MarkInvoicePaid(ctx context.Context, arg MarkInvoicePaidParams) error
+	MarkNotificationSent(ctx context.Context, arg MarkNotificationSentParams) error
 	MarkOverdueInvoices(ctx context.Context) (int64, error)
+	RetryNotification(ctx context.Context, arg RetryNotificationParams) error
 	RevokeAllUserRefreshTokens(ctx context.Context, userID int64) error
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
 	SetCustomerActiveUntil(ctx context.Context, arg SetCustomerActiveUntilParams) error
@@ -97,6 +107,8 @@ type Querier interface {
 	UpdateUserLastLogin(ctx context.Context, id int64) error
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
 	UpsertBandwidthProfile(ctx context.Context, arg UpsertBandwidthProfileParams) (BandwidthProfile, error)
+	UpsertGateway(ctx context.Context, arg UpsertGatewayParams) (WaGateway, error)
+	UpsertTemplate(ctx context.Context, arg UpsertTemplateParams) (MessageTemplate, error)
 }
 
 var _ Querier = (*Queries)(nil)

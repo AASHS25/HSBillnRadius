@@ -275,6 +275,91 @@ func (ns NullLedgerType) Value() (driver.Value, error) {
 	return string(ns.LedgerType), nil
 }
 
+type NotifChannel string
+
+const (
+	NotifChannelWa    NotifChannel = "wa"
+	NotifChannelEmail NotifChannel = "email"
+)
+
+func (e *NotifChannel) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = NotifChannel(s)
+	case string:
+		*e = NotifChannel(s)
+	default:
+		return fmt.Errorf("unsupported scan type for NotifChannel: %T", src)
+	}
+	return nil
+}
+
+type NullNotifChannel struct {
+	NotifChannel NotifChannel `json:"notif_channel"`
+	Valid        bool         `json:"valid"` // Valid is true if NotifChannel is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullNotifChannel) Scan(value interface{}) error {
+	if value == nil {
+		ns.NotifChannel, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.NotifChannel.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullNotifChannel) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.NotifChannel), nil
+}
+
+type NotifStatus string
+
+const (
+	NotifStatusQueued NotifStatus = "queued"
+	NotifStatusSent   NotifStatus = "sent"
+	NotifStatusFailed NotifStatus = "failed"
+)
+
+func (e *NotifStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = NotifStatus(s)
+	case string:
+		*e = NotifStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for NotifStatus: %T", src)
+	}
+	return nil
+}
+
+type NullNotifStatus struct {
+	NotifStatus NotifStatus `json:"notif_status"`
+	Valid       bool        `json:"valid"` // Valid is true if NotifStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullNotifStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.NotifStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.NotifStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullNotifStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.NotifStatus), nil
+}
+
 type PaymentMethod string
 
 const (
@@ -450,6 +535,51 @@ func (ns NullTenantStatus) Value() (driver.Value, error) {
 	return string(ns.TenantStatus), nil
 }
 
+type WaProvider string
+
+const (
+	WaProviderFonnte     WaProvider = "fonnte"
+	WaProviderWablas     WaProvider = "wablas"
+	WaProviderStarsender WaProvider = "starsender"
+	WaProviderOnesender  WaProvider = "onesender"
+	WaProviderUnofficial WaProvider = "unofficial"
+)
+
+func (e *WaProvider) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = WaProvider(s)
+	case string:
+		*e = WaProvider(s)
+	default:
+		return fmt.Errorf("unsupported scan type for WaProvider: %T", src)
+	}
+	return nil
+}
+
+type NullWaProvider struct {
+	WaProvider WaProvider `json:"wa_provider"`
+	Valid      bool       `json:"valid"` // Valid is true if WaProvider is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullWaProvider) Scan(value interface{}) error {
+	if value == nil {
+		ns.WaProvider, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.WaProvider.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullWaProvider) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.WaProvider), nil
+}
+
 type AuditLog struct {
 	ID          int64       `json:"id"`
 	TenantID    int64       `json:"tenant_id"`
@@ -477,6 +607,17 @@ type BandwidthProfile struct {
 	MikrotikRateString string    `json:"mikrotik_rate_string"`
 	CreatedAt          time.Time `json:"created_at"`
 	UpdatedAt          time.Time `json:"updated_at"`
+}
+
+type Broadcast struct {
+	ID           int64     `json:"id"`
+	TenantID     int64     `json:"tenant_id"`
+	Segment      []byte    `json:"segment"`
+	TemplateBody string    `json:"template_body"`
+	Total        int32     `json:"total"`
+	Sent         int32     `json:"sent"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type Customer struct {
@@ -555,6 +696,17 @@ type LedgerEntry struct {
 	CreatedAt   time.Time   `json:"created_at"`
 }
 
+type MessageTemplate struct {
+	ID        int64        `json:"id"`
+	TenantID  int64        `json:"tenant_id"`
+	Key       string       `json:"key"`
+	Channel   NotifChannel `json:"channel"`
+	Body      string       `json:"body"`
+	IsActive  bool         `json:"is_active"`
+	CreatedAt time.Time    `json:"created_at"`
+	UpdatedAt time.Time    `json:"updated_at"`
+}
+
 type Na struct {
 	ID          int64       `json:"id"`
 	TenantID    int64       `json:"tenant_id"`
@@ -568,6 +720,23 @@ type Na struct {
 	Description string      `json:"description"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
+}
+
+type NotificationLog struct {
+	ID            int64              `json:"id"`
+	TenantID      int64              `json:"tenant_id"`
+	Channel       NotifChannel       `json:"channel"`
+	ToAddr        string             `json:"to_addr"`
+	TemplateKey   string             `json:"template_key"`
+	Payload       []byte             `json:"payload"`
+	Status        NotifStatus        `json:"status"`
+	ProviderRef   string             `json:"provider_ref"`
+	Error         string             `json:"error"`
+	Attempts      int32              `json:"attempts"`
+	DedupKey      string             `json:"dedup_key"`
+	NextAttemptAt time.Time          `json:"next_attempt_at"`
+	CreatedAt     time.Time          `json:"created_at"`
+	SentAt        pgtype.Timestamptz `json:"sent_at"`
 }
 
 type Payment struct {
@@ -760,4 +929,15 @@ type User struct {
 	CreatedAt    time.Time          `json:"created_at"`
 	UpdatedAt    time.Time          `json:"updated_at"`
 	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type WaGateway struct {
+	ID         int64      `json:"id"`
+	TenantID   int64      `json:"tenant_id"`
+	Provider   WaProvider `json:"provider"`
+	Config     []byte     `json:"config"`
+	IsActive   bool       `json:"is_active"`
+	DailyLimit int32      `json:"daily_limit"`
+	CreatedAt  time.Time  `json:"created_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
 }

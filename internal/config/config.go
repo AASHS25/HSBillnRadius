@@ -23,6 +23,15 @@ type Config struct {
 	Redis    RedisConfig
 	Radius   RadiusConfig
 	Auth     AuthConfig
+	Worker   WorkerConfig
+}
+
+// WorkerConfig configures the background worker's notification processing.
+type WorkerConfig struct {
+	PollInterval time.Duration `env:"WORKER_POLL_INTERVAL" envDefault:"5s"`
+	Batch        int           `env:"WORKER_BATCH" envDefault:"50"`
+	MaxAttempts  int           `env:"WORKER_MAX_ATTEMPTS" envDefault:"5"`
+	HTTPTimeout  time.Duration `env:"WORKER_HTTP_TIMEOUT" envDefault:"15s"`
 }
 
 // AuthConfig configures JWT issuance and refresh-token lifetimes.

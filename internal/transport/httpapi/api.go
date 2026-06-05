@@ -16,6 +16,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/billingsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/customersvc"
+	"github.com/aashs25/hsbillnradius/internal/service/notifysvc"
 	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
 )
 
@@ -25,18 +26,20 @@ type API struct {
 	plans     *plansvc.Service
 	customers *customersvc.Service
 	billing   *billingsvc.Service
+	notify    *notifysvc.Service
 	tokens    AccessParser
 	valid     *validator.Validate
 	log       *slog.Logger
 }
 
 // New builds the API delivery layer.
-func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, tokens AccessParser, log *slog.Logger) *API {
+func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, tokens AccessParser, log *slog.Logger) *API {
 	return &API{
 		auth:      auth,
 		plans:     plans,
 		customers: customers,
 		billing:   billing,
+		notify:    notify,
 		tokens:    tokens,
 		valid:     validator.New(validator.WithRequiredStructEnabled()),
 		log:       log,
@@ -85,6 +88,13 @@ func (a *API) Mount(r chi.Router) {
 				r.With(RequirePermission("invoice.manage", a.log)).Post("/{id}/void", a.handleVoidInvoice)
 			})
 			r.With(RequirePermission("invoice.read", a.log)).Get("/reports/summary", a.handleReportSummary)
+
+			r.Route("/notifications", func(r chi.Router) {
+				r.Use(RequirePermission("tenant.update", a.log))
+				r.Post("/gateways", a.handleConfigureGateway)
+				r.Post("/templates", a.handleUpsertTemplate)
+				r.Post("/send", a.handleSendNotification)
+			})
 		})
 	})
 }

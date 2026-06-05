@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,6 +18,7 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 
 	"github.com/aashs25/hsbillnradius/internal/config"
+	"github.com/aashs25/hsbillnradius/internal/domain/notification"
 	"github.com/aashs25/hsbillnradius/internal/platform/cache"
 	"github.com/aashs25/hsbillnradius/internal/platform/httpserver"
 	"github.com/aashs25/hsbillnradius/internal/platform/logger"
@@ -25,11 +27,13 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/platform/radiusclient"
 	platformredis "github.com/aashs25/hsbillnradius/internal/platform/redis"
 	"github.com/aashs25/hsbillnradius/internal/platform/token"
+	"github.com/aashs25/hsbillnradius/internal/ports/wa"
 	"github.com/aashs25/hsbillnradius/internal/repo"
 	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/billingsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/coasvc"
 	"github.com/aashs25/hsbillnradius/internal/service/customersvc"
+	"github.com/aashs25/hsbillnradius/internal/service/notifysvc"
 	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
 	"github.com/aashs25/hsbillnradius/internal/transport/httpapi"
 )
@@ -96,8 +100,14 @@ func run() error {
 	customerService := customersvc.New(repos, store, log)
 	coaClient := radiusclient.New(cfg.Radius.CoAPort, cfg.Radius.RequestTimeout)
 	coaService := coasvc.New(repos, coaClient, cache.NewRedis(rdb), log)
-	billingService := billingsvc.New(repos, store, coaService, log)
-	api := httpapi.New(authService, planService, customerService, billingService, tokens, log)
+	httpClient := &http.Client{Timeout: cfg.Worker.HTTPTimeout}
+	waClients := map[notification.Provider]wa.Client{
+		notification.ProviderFonnte: wa.NewFonnte(httpClient),
+		notification.ProviderWablas: wa.NewWablas(httpClient),
+	}
+	notifyService := notifysvc.New(repos, waClients, int32(cfg.Worker.MaxAttempts), log)
+	billingService := billingsvc.New(repos, store, coaService, log).WithNotifier(notifyService)
+	api := httpapi.New(authService, planService, customerService, billingService, notifyService, tokens, log)
 
 	router := newRouter(cfg, log, pool, rdb, api)
 

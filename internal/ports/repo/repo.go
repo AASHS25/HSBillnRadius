@@ -12,6 +12,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/billing"
 	"github.com/aashs25/hsbillnradius/internal/domain/customer"
 	"github.com/aashs25/hsbillnradius/internal/domain/iam"
+	"github.com/aashs25/hsbillnradius/internal/domain/notification"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/radius"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
@@ -162,6 +163,21 @@ type Repositories struct {
 	RadiusAuth   RadiusAuthRepository
 	Accounting   AccountingRepository
 	Billing      BillingRepository
+	Notification NotificationRepository
+}
+
+// NotificationRepository persists notifications (which double as the job queue),
+// gateways and templates.
+type NotificationRepository interface {
+	Enqueue(ctx context.Context, job notification.Job) (bool, error)
+	ClaimDue(ctx context.Context, limit int32, leaseUntil time.Time) ([]notification.Log, error)
+	MarkSent(ctx context.Context, id int64, providerRef string) error
+	Retry(ctx context.Context, id int64, errMsg string, nextAttempt time.Time) error
+	Fail(ctx context.Context, id int64, errMsg string) error
+	ActiveGateway(ctx context.Context, tenantID int64) (notification.Gateway, error)
+	Template(ctx context.Context, tenantID int64, key string, channel notification.Channel) (notification.Template, error)
+	UpsertTemplate(ctx context.Context, t notification.Template) (notification.Template, error)
+	CreateGateway(ctx context.Context, g notification.Gateway) (notification.Gateway, error)
 }
 
 // TxManager runs fn inside a database transaction, providing repositories bound

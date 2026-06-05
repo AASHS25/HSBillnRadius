@@ -13,6 +13,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/billing"
 	"github.com/aashs25/hsbillnradius/internal/domain/customer"
 	"github.com/aashs25/hsbillnradius/internal/domain/iam"
+	"github.com/aashs25/hsbillnradius/internal/domain/notification"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/radius"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
@@ -41,6 +42,11 @@ type Store struct {
 	items     []billing.InvoiceItem
 	payments  map[string]billing.Payment // keyed by idempotency key
 	ledger    []billing.LedgerEntry
+	notifs    map[int64]notification.Log
+	notifStat map[int64]notification.Status
+	dedup     map[string]bool
+	gateways  map[int64]notification.Gateway   // by tenant
+	templates map[string]notification.Template // tenant|key|channel
 	allPerms  []string
 	seq       map[string]int64
 }
@@ -63,6 +69,11 @@ func New() *Store {
 		sessions:  map[string]radius.AcctEvent{},
 		invoices:  map[int64]billing.Invoice{},
 		payments:  map[string]billing.Payment{},
+		notifs:    map[int64]notification.Log{},
+		notifStat: map[int64]notification.Status{},
+		dedup:     map[string]bool{},
+		gateways:  map[int64]notification.Gateway{},
+		templates: map[string]notification.Template{},
 		allPerms: []string{
 			"tenant.read", "tenant.update", "user.read", "user.create",
 			"role.manage", "plan.manage", "customer.create", "customer.read",
@@ -95,7 +106,15 @@ func (s *Store) Repositories() repo.Repositories {
 		RadiusAuth:   &radiusAuthRepo{s},
 		Accounting:   &accountingRepo{s},
 		Billing:      &billingRepo{s},
+		Notification: &notificationRepo{s},
 	}
+}
+
+// NotifStatus returns the delivery status of a notification (for tests).
+func (s *Store) NotifStatus(id int64) notification.Status {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.notifStat[id]
 }
 
 // SeedNas registers a NAS for auth tests and returns it with an id.

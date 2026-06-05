@@ -148,7 +148,11 @@ curl -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/j
 - [x] **M5 — Billing**: invoice generator + prorata (fungsi murni), pajak (bps,
   int64), status machine, pembayaran manual → ledger income + extend masa aktif +
   restore RADIUS, laporan, scheduler (mark-overdue + auto-isolir scan). Verified.
-- [ ] **M6 — Notifikasi WA** · **M7 — Payment Gateway**
+- [x] **M6 — Notifikasi WA**: interface WAClient + 2 provider (fonnte, wablas),
+  antrian transaksional (notification_logs sebagai queue, dedup idempoten,
+  backoff retry), template render, worker processor. Auto-notif "paid" dari
+  billing. Verified end-to-end (mock provider).
+- [ ] **M7 — Payment Gateway**
 - [ ] **M8 — Voucher & Hotspot** · **M9 — Jaringan (OLT/ACS)** · **M10 — Client area + hardening**
 
 ## Konvensi engineering
