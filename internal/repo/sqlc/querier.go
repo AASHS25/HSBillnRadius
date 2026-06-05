@@ -18,6 +18,7 @@ type Querier interface {
 	CountCustomersByTenant(ctx context.Context, tenantID int64) (int64, error)
 	CountPlansByTenant(ctx context.Context, tenantID int64) (int64, error)
 	CountUsersByTenant(ctx context.Context, tenantID int64) (int64, error)
+	CountVouchersByStatus(ctx context.Context, arg CountVouchersByStatusParams) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error)
 	// Idempotent per (customer, period): a conflict returns no row, which the repo
 	// maps to ErrInvoiceExists.
@@ -29,6 +30,8 @@ type Querier interface {
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	CreateVoucher(ctx context.Context, arg CreateVoucherParams) (Voucher, error)
+	CreateVoucherBatch(ctx context.Context, arg CreateVoucherBatchParams) (VoucherBatch, error)
 	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
 	// Provisioning writes for RADIUS. Sync uses delete-then-insert for idempotency.
 	DeleteRadCheckByUser(ctx context.Context, arg DeleteRadCheckByUserParams) error
@@ -55,6 +58,8 @@ type Querier interface {
 	GetTenantBySlug(ctx context.Context, slug string) (Tenant, error)
 	GetUserByEmail(ctx context.Context, arg GetUserByEmailParams) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
+	GetVoucherBatch(ctx context.Context, arg GetVoucherBatchParams) (VoucherBatch, error)
+	GetVoucherByCode(ctx context.Context, arg GetVoucherByCodeParams) (Voucher, error)
 	GrantAllPermissionsToRole(ctx context.Context, roleID int64) error
 	InsertAcctStart(ctx context.Context, arg InsertAcctStartParams) error
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
@@ -86,10 +91,13 @@ type Querier interface {
 	ListRadUserGroups(ctx context.Context, arg ListRadUserGroupsParams) ([]ListRadUserGroupsRow, error)
 	ListRolesByTenant(ctx context.Context, tenantID int64) ([]Role, error)
 	ListUsersByTenant(ctx context.Context, arg ListUsersByTenantParams) ([]User, error)
+	ListVoucherBatches(ctx context.Context, arg ListVoucherBatchesParams) ([]VoucherBatch, error)
+	ListVouchersByBatch(ctx context.Context, arg ListVouchersByBatchParams) ([]Voucher, error)
 	MarkInvoicePaid(ctx context.Context, arg MarkInvoicePaidParams) error
 	MarkNotificationSent(ctx context.Context, arg MarkNotificationSentParams) error
 	MarkOverdueInvoices(ctx context.Context) (int64, error)
 	MarkPaymentStatus(ctx context.Context, arg MarkPaymentStatusParams) error
+	MarkVoucherUsed(ctx context.Context, arg MarkVoucherUsedParams) error
 	RetryNotification(ctx context.Context, arg RetryNotificationParams) error
 	RevokeAllUserRefreshTokens(ctx context.Context, userID int64) error
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error

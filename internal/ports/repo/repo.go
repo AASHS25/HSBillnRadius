@@ -16,6 +16,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/radius"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
+	"github.com/aashs25/hsbillnradius/internal/domain/voucher"
 )
 
 // TenantRepository persists tenants.
@@ -170,6 +171,18 @@ type Repositories struct {
 	Accounting   AccountingRepository
 	Billing      BillingRepository
 	Notification NotificationRepository
+	Voucher      VoucherRepository
+}
+
+// VoucherRepository persists voucher batches and vouchers.
+type VoucherRepository interface {
+	CreateBatch(ctx context.Context, b voucher.Batch) (voucher.Batch, error)
+	CreateVoucher(ctx context.Context, v voucher.Voucher) (voucher.Voucher, error)
+	GetBatch(ctx context.Context, tenantID, id int64) (voucher.Batch, error)
+	ListBatches(ctx context.Context, tenantID int64, limit, offset int32) ([]voucher.Batch, error)
+	ListByBatch(ctx context.Context, tenantID, batchID int64, limit, offset int32) ([]voucher.Voucher, error)
+	GetByCode(ctx context.Context, tenantID int64, code string) (voucher.Voucher, error)
+	MarkUsed(ctx context.Context, tenantID int64, code string) error
 }
 
 // NotificationRepository persists notifications (which double as the job queue),

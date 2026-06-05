@@ -19,6 +19,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/service/notifysvc"
 	"github.com/aashs25/hsbillnradius/internal/service/paymentsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
+	"github.com/aashs25/hsbillnradius/internal/service/vouchersvc"
 )
 
 // API wires the service layer into HTTP handlers.
@@ -29,13 +30,14 @@ type API struct {
 	billing   *billingsvc.Service
 	notify    *notifysvc.Service
 	payments  *paymentsvc.Service
+	vouchers  *vouchersvc.Service
 	tokens    AccessParser
 	valid     *validator.Validate
 	log       *slog.Logger
 }
 
 // New builds the API delivery layer.
-func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, tokens AccessParser, log *slog.Logger) *API {
+func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, vouchers *vouchersvc.Service, tokens AccessParser, log *slog.Logger) *API {
 	return &API{
 		auth:      auth,
 		plans:     plans,
@@ -43,6 +45,7 @@ func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.S
 		billing:   billing,
 		notify:    notify,
 		payments:  payments,
+		vouchers:  vouchers,
 		tokens:    tokens,
 		valid:     validator.New(validator.WithRequiredStructEnabled()),
 		log:       log,
@@ -105,6 +108,13 @@ func (a *API) Mount(r chi.Router) {
 			r.Route("/payments", func(r chi.Router) {
 				r.With(RequirePermission("tenant.update", a.log)).Post("/gateways", a.handleConfigurePaymentGateway)
 				r.With(RequirePermission("payment.manage", a.log)).Post("/charge", a.handleCreateCharge)
+			})
+
+			r.Route("/vouchers", func(r chi.Router) {
+				r.Use(RequirePermission("plan.manage", a.log))
+				r.Post("/batches", a.handleGenerateVouchers)
+				r.Get("/batches", a.handleListVoucherBatches)
+				r.Get("/batches/{id}/vouchers", a.handleListBatchVouchers)
 			})
 		})
 	})

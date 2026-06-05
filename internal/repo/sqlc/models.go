@@ -579,6 +579,50 @@ func (ns NullTenantStatus) Value() (driver.Value, error) {
 	return string(ns.TenantStatus), nil
 }
 
+type VoucherStatus string
+
+const (
+	VoucherStatusUnused   VoucherStatus = "unused"
+	VoucherStatusUsed     VoucherStatus = "used"
+	VoucherStatusExpired  VoucherStatus = "expired"
+	VoucherStatusDisabled VoucherStatus = "disabled"
+)
+
+func (e *VoucherStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = VoucherStatus(s)
+	case string:
+		*e = VoucherStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for VoucherStatus: %T", src)
+	}
+	return nil
+}
+
+type NullVoucherStatus struct {
+	VoucherStatus VoucherStatus `json:"voucher_status"`
+	Valid         bool          `json:"valid"` // Valid is true if VoucherStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullVoucherStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.VoucherStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.VoucherStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullVoucherStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.VoucherStatus), nil
+}
+
 type WaProvider string
 
 const (
@@ -984,6 +1028,40 @@ type User struct {
 	CreatedAt    time.Time          `json:"created_at"`
 	UpdatedAt    time.Time          `json:"updated_at"`
 	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type Voucher struct {
+	ID        int64              `json:"id"`
+	TenantID  int64              `json:"tenant_id"`
+	BatchID   int64              `json:"batch_id"`
+	Code      string             `json:"code"`
+	Username  string             `json:"username"`
+	Password  string             `json:"password"`
+	Status    VoucherStatus      `json:"status"`
+	UsedAt    pgtype.Timestamptz `json:"used_at"`
+	SoldAt    pgtype.Timestamptz `json:"sold_at"`
+	CreatedAt time.Time          `json:"created_at"`
+}
+
+type VoucherBatch struct {
+	ID         int64       `json:"id"`
+	TenantID   int64       `json:"tenant_id"`
+	PlanID     int64       `json:"plan_id"`
+	Prefix     string      `json:"prefix"`
+	Qty        int32       `json:"qty"`
+	PriceIdr   int64       `json:"price_idr"`
+	TemplateID pgtype.Int8 `json:"template_id"`
+	CreatedBy  pgtype.Int8 `json:"created_by"`
+	CreatedAt  time.Time   `json:"created_at"`
+}
+
+type VoucherTemplate struct {
+	ID        int64     `json:"id"`
+	TenantID  int64     `json:"tenant_id"`
+	Name      string    `json:"name"`
+	Html      string    `json:"html"`
+	IsDefault bool      `json:"is_default"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type WaGateway struct {

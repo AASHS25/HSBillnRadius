@@ -13,6 +13,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/radius"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
+	"github.com/aashs25/hsbillnradius/internal/domain/voucher"
 )
 
 // page applies limit/offset to a slice length, returning the sub-bounds.
@@ -1069,4 +1070,90 @@ func (r *billingRepo) UpsertGatewayConfig(_ context.Context, cfg billing.Gateway
 	}
 	r.s.pgGateways[fmt.Sprintf("%d|%s", cfg.TenantID, cfg.Provider)] = cfg
 	return cfg, nil
+}
+
+// --- vouchers ---------------------------------------------------------------
+
+type voucherRepo struct{ s *Store }
+
+func (r *voucherRepo) CreateBatch(_ context.Context, b voucher.Batch) (voucher.Batch, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	b.ID = r.s.next("vbatch")
+	b.CreatedAt = time.Now()
+	r.s.voucherBatches[b.ID] = b
+	return b, nil
+}
+
+func (r *voucherRepo) CreateVoucher(_ context.Context, v voucher.Voucher) (voucher.Voucher, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for _, ex := range r.s.vouchers {
+		if ex.TenantID == v.TenantID && ex.Code == v.Code {
+			return voucher.Voucher{}, fmt.Errorf("duplicate voucher code")
+		}
+	}
+	v.ID = r.s.next("voucher")
+	v.Status = voucher.StatusUnused
+	v.CreatedAt = time.Now()
+	r.s.vouchers[v.ID] = v
+	return v, nil
+}
+
+func (r *voucherRepo) GetBatch(_ context.Context, tenantID, id int64) (voucher.Batch, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	b, ok := r.s.voucherBatches[id]
+	if !ok || b.TenantID != tenantID {
+		return voucher.Batch{}, voucher.ErrBatchNotFound
+	}
+	return b, nil
+}
+
+func (r *voucherRepo) ListBatches(_ context.Context, tenantID int64, limit, offset int32) ([]voucher.Batch, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []voucher.Batch
+	for _, b := range r.s.voucherBatches {
+		if b.TenantID == tenantID {
+			out = append(out, b)
+		}
+	}
+	return page(out, limit, offset), nil
+}
+
+func (r *voucherRepo) ListByBatch(_ context.Context, tenantID, batchID int64, limit, offset int32) ([]voucher.Voucher, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []voucher.Voucher
+	for _, v := range r.s.vouchers {
+		if v.TenantID == tenantID && v.BatchID == batchID {
+			out = append(out, v)
+		}
+	}
+	return page(out, limit, offset), nil
+}
+
+func (r *voucherRepo) GetByCode(_ context.Context, tenantID int64, code string) (voucher.Voucher, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for _, v := range r.s.vouchers {
+		if v.TenantID == tenantID && v.Code == code {
+			return v, nil
+		}
+	}
+	return voucher.Voucher{}, voucher.ErrNotFound
+}
+
+func (r *voucherRepo) MarkUsed(_ context.Context, tenantID int64, code string) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for id, v := range r.s.vouchers {
+		if v.TenantID == tenantID && v.Code == code && v.Status == voucher.StatusUnused {
+			now := time.Now()
+			v.Status, v.UsedAt = voucher.StatusUsed, &now
+			r.s.vouchers[id] = v
+		}
+	}
+	return nil
 }
