@@ -194,6 +194,47 @@ func (q *Queries) ListCustomersByTenant(ctx context.Context, arg ListCustomersBy
 	return items, nil
 }
 
+const listCustomersWithLocation = `-- name: ListCustomersWithLocation :many
+SELECT id, name, lat, lng, status, customer_no FROM customers
+WHERE tenant_id = $1 AND deleted_at IS NULL AND lat IS NOT NULL AND lng IS NOT NULL
+`
+
+type ListCustomersWithLocationRow struct {
+	ID         int64          `json:"id"`
+	Name       string         `json:"name"`
+	Lat        pgtype.Float8  `json:"lat"`
+	Lng        pgtype.Float8  `json:"lng"`
+	Status     CustomerStatus `json:"status"`
+	CustomerNo string         `json:"customer_no"`
+}
+
+func (q *Queries) ListCustomersWithLocation(ctx context.Context, tenantID int64) ([]ListCustomersWithLocationRow, error) {
+	rows, err := q.db.Query(ctx, listCustomersWithLocation, tenantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCustomersWithLocationRow{}
+	for rows.Next() {
+		var i ListCustomersWithLocationRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Lat,
+			&i.Lng,
+			&i.Status,
+			&i.CustomerNo,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listExpiredActiveCustomers = `-- name: ListExpiredActiveCustomers :many
 SELECT id, tenant_id, pppoe_username, plan_id, status
 FROM customers

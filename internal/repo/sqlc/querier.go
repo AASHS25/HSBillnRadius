@@ -12,6 +12,8 @@ import (
 
 type Querier interface {
 	AddRolePermission(ctx context.Context, arg AddRolePermissionParams) error
+	AddTicketEvent(ctx context.Context, arg AddTicketEventParams) (TicketEvent, error)
+	AssignTicket(ctx context.Context, arg AssignTicketParams) error
 	// Atomically lease up to $1 due rows (bump next_attempt_at to the lease and
 	// increment attempts) so concurrent workers don't double-process.
 	ClaimDueNotifications(ctx context.Context, arg ClaimDueNotificationsParams) ([]ClaimDueNotificationsRow, error)
@@ -29,6 +31,7 @@ type Querier interface {
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
+	CreateTicket(ctx context.Context, arg CreateTicketParams) (Ticket, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVoucher(ctx context.Context, arg CreateVoucherParams) (Voucher, error)
 	CreateVoucherBatch(ctx context.Context, arg CreateVoucherBatchParams) (VoucherBatch, error)
@@ -56,6 +59,7 @@ type Querier interface {
 	GetTenantByDomain(ctx context.Context, domain pgtype.Text) (Tenant, error)
 	GetTenantByID(ctx context.Context, id int64) (Tenant, error)
 	GetTenantBySlug(ctx context.Context, slug string) (Tenant, error)
+	GetTicket(ctx context.Context, arg GetTicketParams) (Ticket, error)
 	GetUserByEmail(ctx context.Context, arg GetUserByEmailParams) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetVoucherBatch(ctx context.Context, arg GetVoucherBatchParams) (VoucherBatch, error)
@@ -73,6 +77,7 @@ type Querier interface {
 	ListActiveSessions(ctx context.Context, arg ListActiveSessionsParams) ([]ListActiveSessionsRow, error)
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListCustomersByTenant(ctx context.Context, arg ListCustomersByTenantParams) ([]Customer, error)
+	ListCustomersWithLocation(ctx context.Context, tenantID int64) ([]ListCustomersWithLocationRow, error)
 	ListExpiredActiveCustomers(ctx context.Context, limit int32) ([]ListExpiredActiveCustomersRow, error)
 	ListInvoiceItems(ctx context.Context, invoiceID int64) ([]InvoiceItem, error)
 	ListInvoicesByCustomer(ctx context.Context, arg ListInvoicesByCustomerParams) ([]Invoice, error)
@@ -90,6 +95,8 @@ type Querier interface {
 	ListRadReplyUser(ctx context.Context, arg ListRadReplyUserParams) ([]ListRadReplyUserRow, error)
 	ListRadUserGroups(ctx context.Context, arg ListRadUserGroupsParams) ([]ListRadUserGroupsRow, error)
 	ListRolesByTenant(ctx context.Context, tenantID int64) ([]Role, error)
+	ListTicketEvents(ctx context.Context, ticketID int64) ([]TicketEvent, error)
+	ListTickets(ctx context.Context, arg ListTicketsParams) ([]Ticket, error)
 	ListUsersByTenant(ctx context.Context, arg ListUsersByTenantParams) ([]User, error)
 	ListVoucherBatches(ctx context.Context, arg ListVoucherBatchesParams) ([]VoucherBatch, error)
 	ListVouchersByBatch(ctx context.Context, arg ListVouchersByBatchParams) ([]Voucher, error)
@@ -116,6 +123,7 @@ type Querier interface {
 	UpdateCustomerStatus(ctx context.Context, arg UpdateCustomerStatusParams) error
 	UpdatePlan(ctx context.Context, arg UpdatePlanParams) (Plan, error)
 	UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error)
+	UpdateTicketStatus(ctx context.Context, arg UpdateTicketStatusParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserLastLogin(ctx context.Context, id int64) error
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error

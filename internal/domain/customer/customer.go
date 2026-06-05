@@ -78,6 +78,16 @@ type Expired struct {
 	PlanID        *int64
 }
 
+// Location is a customer's map point.
+type Location struct {
+	ID         int64
+	Name       string
+	CustomerNo string
+	Lat        float64
+	Lng        float64
+	Status     Status
+}
+
 // Validate enforces customer invariants.
 func (c Customer) Validate() error {
 	if strings.TrimSpace(c.Name) == "" {

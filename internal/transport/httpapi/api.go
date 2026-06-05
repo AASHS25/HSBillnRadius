@@ -19,6 +19,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/service/notifysvc"
 	"github.com/aashs25/hsbillnradius/internal/service/paymentsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
+	"github.com/aashs25/hsbillnradius/internal/service/ticketsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/vouchersvc"
 )
 
@@ -31,13 +32,14 @@ type API struct {
 	notify    *notifysvc.Service
 	payments  *paymentsvc.Service
 	vouchers  *vouchersvc.Service
+	tickets   *ticketsvc.Service
 	tokens    AccessParser
 	valid     *validator.Validate
 	log       *slog.Logger
 }
 
 // New builds the API delivery layer.
-func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, vouchers *vouchersvc.Service, tokens AccessParser, log *slog.Logger) *API {
+func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, vouchers *vouchersvc.Service, tickets *ticketsvc.Service, tokens AccessParser, log *slog.Logger) *API {
 	return &API{
 		auth:      auth,
 		plans:     plans,
@@ -46,6 +48,7 @@ func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.S
 		notify:    notify,
 		payments:  payments,
 		vouchers:  vouchers,
+		tickets:   tickets,
 		tokens:    tokens,
 		valid:     validator.New(validator.WithRequiredStructEnabled()),
 		log:       log,
@@ -116,6 +119,15 @@ func (a *API) Mount(r chi.Router) {
 				r.Get("/batches", a.handleListVoucherBatches)
 				r.Get("/batches/{id}/vouchers", a.handleListBatchVouchers)
 			})
+
+			r.Route("/tickets", func(r chi.Router) {
+				r.Use(RequirePermission("customer.read", a.log))
+				r.Post("/", a.handleCreateTicket)
+				r.Get("/", a.handleListTickets)
+				r.Get("/{id}", a.handleGetTicket)
+				r.Post("/{id}/transition", a.handleTransitionTicket)
+			})
+			r.With(RequirePermission("customer.read", a.log)).Get("/maps/customers.geojson", a.handleMapsGeoJSON)
 		})
 	})
 }

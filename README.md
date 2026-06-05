@@ -157,7 +157,11 @@ curl -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/j
   `/webhooks/payment/{provider}` dengan verifikasi + idempotency + settlement
   transaksional (invoice paid + ledger + extend + restore + notif), polling
   fallback. Verified end-to-end (callback ber-signature → invoice lunas).
-- [ ] **M8 — Voucher & Hotspot** · **M9 — Jaringan (OLT/ACS)** · **M10 — Client area + hardening**
+- [x] **M8 — Voucher & Hotspot**: batch generate + provisioning RADIUS hotspot.
+- [x] **M9 — Jaringan & operasional**: tiket (state machine + timeline), peta
+  pelanggan GeoJSON, interface driver OLT multi-vendor (kontrak). Implementasi
+  driver per-vendor & GenieACS bersifat scaffold (butuh perangkat nyata).
+- [ ] **M10 — Client area + hardening**
 
 ## Konvensi engineering
 

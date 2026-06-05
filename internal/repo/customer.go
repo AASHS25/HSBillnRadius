@@ -125,6 +125,24 @@ func (r *customerRepo) SetActiveUntil(ctx context.Context, tenantID, id int64, u
 	return nil
 }
 
+func (r *customerRepo) ListWithLocation(ctx context.Context, tenantID int64) ([]customer.Location, error) {
+	rows, err := r.q.ListCustomersWithLocation(ctx, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("list customers with location: %w", err)
+	}
+	out := make([]customer.Location, 0, len(rows))
+	for _, m := range rows {
+		if !m.Lat.Valid || !m.Lng.Valid {
+			continue
+		}
+		out = append(out, customer.Location{
+			ID: m.ID, Name: m.Name, CustomerNo: m.CustomerNo,
+			Lat: m.Lat.Float64, Lng: m.Lng.Float64, Status: customer.Status(m.Status),
+		})
+	}
+	return out, nil
+}
+
 func (r *customerRepo) ListExpiredActive(ctx context.Context, limit int32) ([]customer.Expired, error) {
 	rows, err := r.q.ListExpiredActiveCustomers(ctx, limit)
 	if err != nil {

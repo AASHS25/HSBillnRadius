@@ -111,6 +111,11 @@ func (s *Service) Get(ctx context.Context, tenantID, id int64) (customer.Custome
 	return s.repos.Customer.GetByID(ctx, tenantID, id)
 }
 
+// Locations returns customers that have coordinates, for the map view.
+func (s *Service) Locations(ctx context.Context, tenantID int64) ([]customer.Location, error) {
+	return s.repos.Customer.ListWithLocation(ctx, tenantID)
+}
+
 // List returns a page of customers with the total count.
 func (s *Service) List(ctx context.Context, tenantID int64, limit, offset int32) ([]customer.Customer, int64, error) {
 	customers, err := s.repos.Customer.List(ctx, tenantID, limit, offset)

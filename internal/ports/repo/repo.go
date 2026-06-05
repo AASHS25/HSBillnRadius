@@ -16,6 +16,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/radius"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
+	"github.com/aashs25/hsbillnradius/internal/domain/ticket"
 	"github.com/aashs25/hsbillnradius/internal/domain/voucher"
 )
 
@@ -100,6 +101,17 @@ type CustomerRepository interface {
 	SoftDelete(ctx context.Context, tenantID, id int64) error
 	SetActiveUntil(ctx context.Context, tenantID, id int64, until time.Time, status customer.Status) error
 	ListExpiredActive(ctx context.Context, limit int32) ([]customer.Expired, error)
+	ListWithLocation(ctx context.Context, tenantID int64) ([]customer.Location, error)
+}
+
+// TicketRepository persists support tickets and their events.
+type TicketRepository interface {
+	Create(ctx context.Context, t ticket.Ticket) (ticket.Ticket, error)
+	Get(ctx context.Context, tenantID, id int64) (ticket.Ticket, error)
+	List(ctx context.Context, tenantID int64, limit, offset int32) ([]ticket.Ticket, error)
+	UpdateStatus(ctx context.Context, tenantID, id int64, status ticket.Status) error
+	AddEvent(ctx context.Context, e ticket.Event) (ticket.Event, error)
+	ListEvents(ctx context.Context, ticketID int64) ([]ticket.Event, error)
 }
 
 // BillingRepository persists invoices, items, payments and the cashbook ledger.
@@ -172,6 +184,7 @@ type Repositories struct {
 	Billing      BillingRepository
 	Notification NotificationRepository
 	Voucher      VoucherRepository
+	Ticket       TicketRepository
 }
 
 // VoucherRepository persists voucher batches and vouchers.

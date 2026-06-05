@@ -13,6 +13,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/iam"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
+	"github.com/aashs25/hsbillnradius/internal/domain/ticket"
 	"github.com/aashs25/hsbillnradius/internal/platform/token"
 )
 
@@ -80,14 +81,16 @@ func classify(err error) (int, string) {
 	case errors.Is(err, iam.ErrUserNotFound), errors.Is(err, tenant.ErrNotFound),
 		errors.Is(err, iam.ErrRoleNotFound), errors.Is(err, plan.ErrNotFound),
 		errors.Is(err, customer.ErrNotFound), errors.Is(err, billing.ErrInvoiceNotFound),
-		errors.Is(err, billing.ErrPaymentNotFound), errors.Is(err, billing.ErrGatewayNotEnabled):
+		errors.Is(err, billing.ErrPaymentNotFound), errors.Is(err, billing.ErrGatewayNotEnabled),
+		errors.Is(err, ticket.ErrNotFound):
 		return http.StatusNotFound, "not_found"
 	case errors.Is(err, iam.ErrEmailTaken), errors.Is(err, tenant.ErrSlugTaken),
 		errors.Is(err, plan.ErrNameTaken), errors.Is(err, customer.ErrNoTaken),
 		errors.Is(err, customer.ErrUsernameTaken), errors.Is(err, billing.ErrInvoiceExists),
 		errors.Is(err, billing.ErrAlreadyPaid), errors.Is(err, billing.ErrPaymentNotUnique):
 		return http.StatusConflict, "conflict"
-	case errors.Is(err, billing.ErrInvalidStatus):
+	case errors.Is(err, billing.ErrInvalidStatus), errors.Is(err, ticket.ErrInvalidStatus),
+		errors.Is(err, ticket.ErrInvalidTicket):
 		return http.StatusUnprocessableEntity, "invalid_status"
 	case errors.Is(err, iam.ErrWeakPassword), errors.Is(err, iam.ErrInvalidEmail),
 		errors.Is(err, tenant.ErrInvalidSlug), errors.Is(err, plan.ErrInvalidPlan),

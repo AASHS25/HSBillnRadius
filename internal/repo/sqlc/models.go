@@ -579,6 +579,93 @@ func (ns NullTenantStatus) Value() (driver.Value, error) {
 	return string(ns.TenantStatus), nil
 }
 
+type TicketStatus string
+
+const (
+	TicketStatusOpen       TicketStatus = "open"
+	TicketStatusInProgress TicketStatus = "in_progress"
+	TicketStatusResolved   TicketStatus = "resolved"
+	TicketStatusClosed     TicketStatus = "closed"
+)
+
+func (e *TicketStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TicketStatus(s)
+	case string:
+		*e = TicketStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TicketStatus: %T", src)
+	}
+	return nil
+}
+
+type NullTicketStatus struct {
+	TicketStatus TicketStatus `json:"ticket_status"`
+	Valid        bool         `json:"valid"` // Valid is true if TicketStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTicketStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.TicketStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TicketStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTicketStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TicketStatus), nil
+}
+
+type TicketType string
+
+const (
+	TicketTypeTrouble TicketType = "trouble"
+	TicketTypeInstall TicketType = "install"
+	TicketTypeOther   TicketType = "other"
+)
+
+func (e *TicketType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = TicketType(s)
+	case string:
+		*e = TicketType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for TicketType: %T", src)
+	}
+	return nil
+}
+
+type NullTicketType struct {
+	TicketType TicketType `json:"ticket_type"`
+	Valid      bool       `json:"valid"` // Valid is true if TicketType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullTicketType) Scan(value interface{}) error {
+	if value == nil {
+		ns.TicketType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.TicketType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullTicketType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.TicketType), nil
+}
+
 type VoucherStatus string
 
 const (
@@ -1012,6 +1099,32 @@ type Tenant struct {
 	CreatedAt time.Time          `json:"created_at"`
 	UpdatedAt time.Time          `json:"updated_at"`
 	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type Ticket struct {
+	ID             int64              `json:"id"`
+	TenantID       int64              `json:"tenant_id"`
+	CustomerID     pgtype.Int8        `json:"customer_id"`
+	Type           TicketType         `json:"type"`
+	Subject        string             `json:"subject"`
+	Description    string             `json:"description"`
+	Status         TicketStatus       `json:"status"`
+	Priority       int32              `json:"priority"`
+	AssignedUserID pgtype.Int8        `json:"assigned_user_id"`
+	CreatedBy      pgtype.Int8        `json:"created_by"`
+	CreatedAt      time.Time          `json:"created_at"`
+	UpdatedAt      time.Time          `json:"updated_at"`
+	ResolvedAt     pgtype.Timestamptz `json:"resolved_at"`
+}
+
+type TicketEvent struct {
+	ID         int64       `json:"id"`
+	TicketID   int64       `json:"ticket_id"`
+	UserID     pgtype.Int8 `json:"user_id"`
+	Note       string      `json:"note"`
+	StatusFrom string      `json:"status_from"`
+	StatusTo   string      `json:"status_to"`
+	CreatedAt  time.Time   `json:"created_at"`
 }
 
 type User struct {

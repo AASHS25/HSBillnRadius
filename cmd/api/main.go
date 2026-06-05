@@ -37,6 +37,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/service/notifysvc"
 	"github.com/aashs25/hsbillnradius/internal/service/paymentsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
+	"github.com/aashs25/hsbillnradius/internal/service/ticketsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/vouchersvc"
 	"github.com/aashs25/hsbillnradius/internal/transport/httpapi"
 )
@@ -116,7 +117,8 @@ func run() error {
 	}
 	paymentService := paymentsvc.New(repos, store, paymentGateways, coaService, notifyService, log)
 	voucherService := vouchersvc.New(repos, store, log)
-	api := httpapi.New(authService, planService, customerService, billingService, notifyService, paymentService, voucherService, tokens, log)
+	ticketService := ticketsvc.New(repos, log)
+	api := httpapi.New(authService, planService, customerService, billingService, notifyService, paymentService, voucherService, ticketService, tokens, log)
 
 	router := newRouter(cfg, log, pool, rdb, api)
 

@@ -13,6 +13,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/radius"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
+	"github.com/aashs25/hsbillnradius/internal/domain/ticket"
 	"github.com/aashs25/hsbillnradius/internal/domain/voucher"
 )
 
@@ -1156,4 +1157,89 @@ func (r *voucherRepo) MarkUsed(_ context.Context, tenantID int64, code string) e
 		}
 	}
 	return nil
+}
+
+func (r *customerRepo) ListWithLocation(_ context.Context, tenantID int64) ([]customer.Location, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []customer.Location
+	for _, c := range r.s.customers {
+		if c.TenantID == tenantID && c.Lat != nil && c.Lng != nil {
+			out = append(out, customer.Location{ID: c.ID, Name: c.Name, CustomerNo: c.CustomerNo, Lat: *c.Lat, Lng: *c.Lng, Status: c.Status})
+		}
+	}
+	return out, nil
+}
+
+// --- tickets ----------------------------------------------------------------
+
+type ticketRepo struct{ s *Store }
+
+func (r *ticketRepo) Create(_ context.Context, t ticket.Ticket) (ticket.Ticket, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	t.ID = r.s.next("ticket")
+	t.Status = ticket.StatusOpen
+	t.CreatedAt, t.UpdatedAt = time.Now(), time.Now()
+	r.s.tickets[t.ID] = t
+	return t, nil
+}
+
+func (r *ticketRepo) Get(_ context.Context, tenantID, id int64) (ticket.Ticket, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	t, ok := r.s.tickets[id]
+	if !ok || t.TenantID != tenantID {
+		return ticket.Ticket{}, ticket.ErrNotFound
+	}
+	return t, nil
+}
+
+func (r *ticketRepo) List(_ context.Context, tenantID int64, limit, offset int32) ([]ticket.Ticket, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []ticket.Ticket
+	for _, t := range r.s.tickets {
+		if t.TenantID == tenantID {
+			out = append(out, t)
+		}
+	}
+	return page(out, limit, offset), nil
+}
+
+func (r *ticketRepo) UpdateStatus(_ context.Context, tenantID, id int64, status ticket.Status) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	t, ok := r.s.tickets[id]
+	if !ok || t.TenantID != tenantID {
+		return ticket.ErrNotFound
+	}
+	t.Status = status
+	if status == ticket.StatusResolved {
+		now := time.Now()
+		t.ResolvedAt = &now
+	}
+	r.s.tickets[id] = t
+	return nil
+}
+
+func (r *ticketRepo) AddEvent(_ context.Context, e ticket.Event) (ticket.Event, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	e.ID = r.s.next("tevent")
+	e.CreatedAt = time.Now()
+	r.s.ticketEvents = append(r.s.ticketEvents, e)
+	return e, nil
+}
+
+func (r *ticketRepo) ListEvents(_ context.Context, ticketID int64) ([]ticket.Event, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []ticket.Event
+	for _, e := range r.s.ticketEvents {
+		if e.TicketID == ticketID {
+			out = append(out, e)
+		}
+	}
+	return out, nil
 }

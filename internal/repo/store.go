@@ -55,6 +55,7 @@ func buildRepos(q *sqlc.Queries) port.Repositories {
 		Billing:      &billingRepo{q: q},
 		Notification: &notificationRepo{q: q},
 		Voucher:      &voucherRepo{q: q},
+		Ticket:       &ticketRepo{q: q},
 	}
 }
 

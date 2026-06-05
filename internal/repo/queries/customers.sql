@@ -39,6 +39,10 @@ WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL;
 UPDATE customers SET active_until = $3, status = $4, updated_at = now()
 WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL;
 
+-- name: ListCustomersWithLocation :many
+SELECT id, name, lat, lng, status, customer_no FROM customers
+WHERE tenant_id = $1 AND deleted_at IS NULL AND lat IS NOT NULL AND lng IS NOT NULL;
+
 -- name: ListExpiredActiveCustomers :many
 SELECT id, tenant_id, pppoe_username, plan_id, status
 FROM customers
