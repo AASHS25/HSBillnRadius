@@ -1282,3 +1282,50 @@ func (r *acsRepo) Get(_ context.Context, tenantID int64, deviceID string) (acs.S
 	}
 	return d, nil
 }
+
+func (r *customerRepo) GetByNo(_ context.Context, tenantID int64, customerNo string) (customer.Customer, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for _, c := range r.s.customers {
+		if c.TenantID == tenantID && c.CustomerNo == customerNo {
+			return c, nil
+		}
+	}
+	return customer.Customer{}, customer.ErrNotFound
+}
+
+func (r *customerRepo) SetPortalPassword(_ context.Context, tenantID, id int64, hash string) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	c, ok := r.s.customers[id]
+	if !ok || c.TenantID != tenantID {
+		return customer.ErrNotFound
+	}
+	c.PortalPasswordHash = hash
+	r.s.customers[id] = c
+	return nil
+}
+
+func (r *ticketRepo) ListByCustomer(_ context.Context, tenantID, customerID int64, limit, offset int32) ([]ticket.Ticket, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []ticket.Ticket
+	for _, t := range r.s.tickets {
+		if t.TenantID == tenantID && t.CustomerID != nil && *t.CustomerID == customerID {
+			out = append(out, t)
+		}
+	}
+	return page(out, limit, offset), nil
+}
+
+func (r *billingRepo) ListInvoicesByCustomer(_ context.Context, tenantID, customerID int64, limit, offset int32) ([]billing.Invoice, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []billing.Invoice
+	for _, inv := range r.s.invoices {
+		if inv.TenantID == tenantID && inv.CustomerID == customerID {
+			out = append(out, inv)
+		}
+	}
+	return page(out, limit, offset), nil
+}

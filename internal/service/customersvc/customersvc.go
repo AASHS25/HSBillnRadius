@@ -19,9 +19,10 @@ import (
 
 // Service provides customer management with RADIUS provisioning.
 type Service struct {
-	repos repo.Repositories
-	tx    repo.TxManager
-	log   *slog.Logger
+	repos  repo.Repositories
+	tx     repo.TxManager
+	hasher Hasher
+	log    *slog.Logger
 }
 
 // New builds a customer Service.
@@ -228,4 +229,51 @@ func (s *Service) audit(ctx context.Context, r repo.Repositories, tenantID, acto
 	}); err != nil {
 		s.log.WarnContext(ctx, "audit insert failed", slog.Any("error", err), slog.String("action", action))
 	}
+}
+
+// Hasher hashes and verifies portal passwords.
+type Hasher interface {
+	Hash(plain string) (string, error)
+	Verify(plain, encoded string) (bool, error)
+}
+
+// WithHasher enables client-area (portal) authentication.
+func (s *Service) WithHasher(h Hasher) *Service {
+	s.hasher = h
+	return s
+}
+
+// PortalLogin verifies a customer's client-area credentials.
+func (s *Service) PortalLogin(ctx context.Context, tenantSlug, customerNo, password string) (customer.Customer, error) {
+	if s.hasher == nil {
+		return customer.Customer{}, customer.ErrPortalInvalid
+	}
+	t, err := s.repos.Tenant.GetBySlug(ctx, tenantSlug)
+	if err != nil {
+		return customer.Customer{}, customer.ErrPortalInvalid
+	}
+	c, err := s.repos.Customer.GetByNo(ctx, t.ID, customerNo)
+	if err != nil {
+		return customer.Customer{}, customer.ErrPortalInvalid
+	}
+	if c.PortalPasswordHash == "" {
+		return customer.Customer{}, customer.ErrPortalInvalid
+	}
+	ok, err := s.hasher.Verify(password, c.PortalPasswordHash)
+	if err != nil || !ok {
+		return customer.Customer{}, customer.ErrPortalInvalid
+	}
+	return c, nil
+}
+
+// SetPortalPassword sets a customer's client-area password (admin action).
+func (s *Service) SetPortalPassword(ctx context.Context, tenantID, customerID int64, password string) error {
+	if s.hasher == nil {
+		return customer.ErrPortalInvalid
+	}
+	hash, err := s.hasher.Hash(password)
+	if err != nil {
+		return err
+	}
+	return s.repos.Customer.SetPortalPassword(ctx, tenantID, customerID, hash)
 }

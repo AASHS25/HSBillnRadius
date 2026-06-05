@@ -811,28 +811,29 @@ type Broadcast struct {
 }
 
 type Customer struct {
-	ID            int64              `json:"id"`
-	TenantID      int64              `json:"tenant_id"`
-	CustomerNo    string             `json:"customer_no"`
-	Name          string             `json:"name"`
-	IDCardNo      string             `json:"id_card_no"`
-	Email         string             `json:"email"`
-	PhoneWa       string             `json:"phone_wa"`
-	Address       string             `json:"address"`
-	Lat           pgtype.Float8      `json:"lat"`
-	Lng           pgtype.Float8      `json:"lng"`
-	InstallDate   pgtype.Date        `json:"install_date"`
-	Status        CustomerStatus     `json:"status"`
-	PlanID        pgtype.Int8        `json:"plan_id"`
-	ResellerID    pgtype.Int8        `json:"reseller_id"`
-	BalanceIdr    int64              `json:"balance_idr"`
-	PppoeUsername pgtype.Text        `json:"pppoe_username"`
-	PppoePassword pgtype.Text        `json:"pppoe_password"`
-	Notes         string             `json:"notes"`
-	CreatedAt     time.Time          `json:"created_at"`
-	UpdatedAt     time.Time          `json:"updated_at"`
-	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
-	ActiveUntil   pgtype.Timestamptz `json:"active_until"`
+	ID                 int64              `json:"id"`
+	TenantID           int64              `json:"tenant_id"`
+	CustomerNo         string             `json:"customer_no"`
+	Name               string             `json:"name"`
+	IDCardNo           string             `json:"id_card_no"`
+	Email              string             `json:"email"`
+	PhoneWa            string             `json:"phone_wa"`
+	Address            string             `json:"address"`
+	Lat                pgtype.Float8      `json:"lat"`
+	Lng                pgtype.Float8      `json:"lng"`
+	InstallDate        pgtype.Date        `json:"install_date"`
+	Status             CustomerStatus     `json:"status"`
+	PlanID             pgtype.Int8        `json:"plan_id"`
+	ResellerID         pgtype.Int8        `json:"reseller_id"`
+	BalanceIdr         int64              `json:"balance_idr"`
+	PppoeUsername      pgtype.Text        `json:"pppoe_username"`
+	PppoePassword      pgtype.Text        `json:"pppoe_password"`
+	Notes              string             `json:"notes"`
+	CreatedAt          time.Time          `json:"created_at"`
+	UpdatedAt          time.Time          `json:"updated_at"`
+	DeletedAt          pgtype.Timestamptz `json:"deleted_at"`
+	ActiveUntil        pgtype.Timestamptz `json:"active_until"`
+	PortalPasswordHash string             `json:"portal_password_hash"`
 }
 
 type CustomerDocument struct {

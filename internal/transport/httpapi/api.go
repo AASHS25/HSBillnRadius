@@ -15,6 +15,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/aashs25/hsbillnradius/internal/platform/ratelimit"
+	"github.com/aashs25/hsbillnradius/internal/platform/token"
 	"github.com/aashs25/hsbillnradius/internal/service/acssvc"
 
 	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
@@ -39,13 +40,13 @@ type API struct {
 	tickets   *ticketsvc.Service
 	acs       *acssvc.Service
 	limiter   ratelimit.Limiter
-	tokens    AccessParser
+	tokens    *token.Manager
 	valid     *validator.Validate
 	log       *slog.Logger
 }
 
 // New builds the API delivery layer.
-func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, vouchers *vouchersvc.Service, tickets *ticketsvc.Service, acs *acssvc.Service, limiter ratelimit.Limiter, tokens AccessParser, log *slog.Logger) *API {
+func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, vouchers *vouchersvc.Service, tickets *ticketsvc.Service, acs *acssvc.Service, limiter ratelimit.Limiter, tokens *token.Manager, log *slog.Logger) *API {
 	return &API{
 		auth:      auth,
 		plans:     plans,
@@ -99,6 +100,7 @@ func (a *API) Mount(r chi.Router) {
 				r.With(RequirePermission("customer.read", a.log)).Get("/{id}", a.handleGetCustomer)
 				r.With(RequirePermission("customer.update", a.log)).Put("/{id}", a.handleUpdateCustomer)
 				r.With(RequirePermission("customer.delete", a.log)).Delete("/{id}", a.handleDeleteCustomer)
+				r.With(RequirePermission("customer.update", a.log)).Post("/{id}/portal-password", a.handleSetPortalPassword)
 			})
 
 			r.Route("/invoices", func(r chi.Router) {
@@ -145,6 +147,17 @@ func (a *API) Mount(r chi.Router) {
 				r.Post("/{deviceID}/wifi", a.handleSetACSWiFi)
 				r.Post("/{deviceID}/reboot", a.handleRebootACSDevice)
 			})
+		})
+
+		// Client-area (customer portal): separate customer authentication.
+		r.With(RateLimit(a.limiter, 10, time.Minute, a.log)).Post("/portal/login", a.handlePortalLogin)
+		r.Group(func(r chi.Router) {
+			r.Use(Authenticator(a.tokens, a.log))
+			r.Use(RequireCustomer(a.log))
+			r.Get("/portal/me", a.handlePortalMe)
+			r.Get("/portal/invoices", a.handlePortalInvoices)
+			r.Get("/portal/tickets", a.handlePortalTickets)
+			r.Post("/portal/tickets", a.handlePortalCreateTicket)
 		})
 	})
 }

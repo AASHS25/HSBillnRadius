@@ -50,3 +50,10 @@ WHERE deleted_at IS NULL AND status = 'active'
   AND active_until IS NOT NULL AND active_until < now()
 ORDER BY active_until
 LIMIT $1;
+
+-- name: GetCustomerByNo :one
+SELECT * FROM customers WHERE tenant_id = $1 AND customer_no = $2 AND deleted_at IS NULL;
+
+-- name: SetPortalPassword :exec
+UPDATE customers SET portal_password_hash = $3, updated_at = now()
+WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL;

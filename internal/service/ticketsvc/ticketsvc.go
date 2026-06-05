@@ -105,3 +105,8 @@ func actorPtr(id int64) *int64 {
 	}
 	return &id
 }
+
+// ListByCustomer returns a customer's tickets (client area).
+func (s *Service) ListByCustomer(ctx context.Context, tenantID, customerID int64, limit, offset int32) ([]ticket.Ticket, error) {
+	return s.repos.Ticket.ListByCustomer(ctx, tenantID, customerID, limit, offset)
+}

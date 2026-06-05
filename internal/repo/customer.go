@@ -172,3 +172,21 @@ func mapCustomerErr(err error) error {
 	}
 	return fmt.Errorf("customer write: %w", err)
 }
+
+func (r *customerRepo) GetByNo(ctx context.Context, tenantID int64, customerNo string) (customer.Customer, error) {
+	m, err := r.q.GetCustomerByNo(ctx, sqlc.GetCustomerByNoParams{TenantID: tenantID, CustomerNo: customerNo})
+	if err != nil {
+		if isNotFound(err) {
+			return customer.Customer{}, customer.ErrNotFound
+		}
+		return customer.Customer{}, fmt.Errorf("get customer by no: %w", err)
+	}
+	return toDomainCustomer(m), nil
+}
+
+func (r *customerRepo) SetPortalPassword(ctx context.Context, tenantID, id int64, hash string) error {
+	if err := r.q.SetPortalPassword(ctx, sqlc.SetPortalPasswordParams{ID: id, TenantID: tenantID, PortalPasswordHash: hash}); err != nil {
+		return fmt.Errorf("set portal password: %w", err)
+	}
+	return nil
+}

@@ -27,3 +27,7 @@ RETURNING *;
 
 -- name: ListTicketEvents :many
 SELECT * FROM ticket_events WHERE ticket_id = $1 ORDER BY created_at;
+
+-- name: ListTicketsByCustomer :many
+SELECT * FROM tickets WHERE tenant_id = $1 AND customer_id = $2
+ORDER BY created_at DESC LIMIT $3 OFFSET $4;

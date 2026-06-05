@@ -215,6 +215,57 @@ func (q *Queries) ListTickets(ctx context.Context, arg ListTicketsParams) ([]Tic
 	return items, nil
 }
 
+const listTicketsByCustomer = `-- name: ListTicketsByCustomer :many
+SELECT id, tenant_id, customer_id, type, subject, description, status, priority, assigned_user_id, created_by, created_at, updated_at, resolved_at FROM tickets WHERE tenant_id = $1 AND customer_id = $2
+ORDER BY created_at DESC LIMIT $3 OFFSET $4
+`
+
+type ListTicketsByCustomerParams struct {
+	TenantID   int64       `json:"tenant_id"`
+	CustomerID pgtype.Int8 `json:"customer_id"`
+	Limit      int32       `json:"limit"`
+	Offset     int32       `json:"offset"`
+}
+
+func (q *Queries) ListTicketsByCustomer(ctx context.Context, arg ListTicketsByCustomerParams) ([]Ticket, error) {
+	rows, err := q.db.Query(ctx, listTicketsByCustomer,
+		arg.TenantID,
+		arg.CustomerID,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Ticket{}
+	for rows.Next() {
+		var i Ticket
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.CustomerID,
+			&i.Type,
+			&i.Subject,
+			&i.Description,
+			&i.Status,
+			&i.Priority,
+			&i.AssignedUserID,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.ResolvedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateTicketStatus = `-- name: UpdateTicketStatus :exec
 UPDATE tickets SET
     status = $3,

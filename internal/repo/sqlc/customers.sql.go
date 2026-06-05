@@ -28,7 +28,7 @@ INSERT INTO customers (
     lat, lng, install_date, status, plan_id, reseller_id, balance_idr,
     pppoe_username, pppoe_password, notes
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-RETURNING id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until
+RETURNING id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until, portal_password_hash
 `
 
 type CreateCustomerParams struct {
@@ -95,12 +95,13 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.ActiveUntil,
+		&i.PortalPasswordHash,
 	)
 	return i, err
 }
 
 const getCustomerByID = `-- name: GetCustomerByID :one
-SELECT id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until FROM customers WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
+SELECT id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until, portal_password_hash FROM customers WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
 `
 
 type GetCustomerByIDParams struct {
@@ -134,12 +135,53 @@ func (q *Queries) GetCustomerByID(ctx context.Context, arg GetCustomerByIDParams
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.ActiveUntil,
+		&i.PortalPasswordHash,
+	)
+	return i, err
+}
+
+const getCustomerByNo = `-- name: GetCustomerByNo :one
+SELECT id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until, portal_password_hash FROM customers WHERE tenant_id = $1 AND customer_no = $2 AND deleted_at IS NULL
+`
+
+type GetCustomerByNoParams struct {
+	TenantID   int64  `json:"tenant_id"`
+	CustomerNo string `json:"customer_no"`
+}
+
+func (q *Queries) GetCustomerByNo(ctx context.Context, arg GetCustomerByNoParams) (Customer, error) {
+	row := q.db.QueryRow(ctx, getCustomerByNo, arg.TenantID, arg.CustomerNo)
+	var i Customer
+	err := row.Scan(
+		&i.ID,
+		&i.TenantID,
+		&i.CustomerNo,
+		&i.Name,
+		&i.IDCardNo,
+		&i.Email,
+		&i.PhoneWa,
+		&i.Address,
+		&i.Lat,
+		&i.Lng,
+		&i.InstallDate,
+		&i.Status,
+		&i.PlanID,
+		&i.ResellerID,
+		&i.BalanceIdr,
+		&i.PppoeUsername,
+		&i.PppoePassword,
+		&i.Notes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.ActiveUntil,
+		&i.PortalPasswordHash,
 	)
 	return i, err
 }
 
 const listCustomersByTenant = `-- name: ListCustomersByTenant :many
-SELECT id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until FROM customers
+SELECT id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until, portal_password_hash FROM customers
 WHERE tenant_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -183,6 +225,7 @@ func (q *Queries) ListCustomersByTenant(ctx context.Context, arg ListCustomersBy
 			&i.UpdatedAt,
 			&i.DeletedAt,
 			&i.ActiveUntil,
+			&i.PortalPasswordHash,
 		); err != nil {
 			return nil, err
 		}
@@ -300,6 +343,22 @@ func (q *Queries) SetCustomerActiveUntil(ctx context.Context, arg SetCustomerAct
 	return err
 }
 
+const setPortalPassword = `-- name: SetPortalPassword :exec
+UPDATE customers SET portal_password_hash = $3, updated_at = now()
+WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
+`
+
+type SetPortalPasswordParams struct {
+	ID                 int64  `json:"id"`
+	TenantID           int64  `json:"tenant_id"`
+	PortalPasswordHash string `json:"portal_password_hash"`
+}
+
+func (q *Queries) SetPortalPassword(ctx context.Context, arg SetPortalPasswordParams) error {
+	_, err := q.db.Exec(ctx, setPortalPassword, arg.ID, arg.TenantID, arg.PortalPasswordHash)
+	return err
+}
+
 const softDeleteCustomer = `-- name: SoftDeleteCustomer :exec
 UPDATE customers SET deleted_at = now(), updated_at = now()
 WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
@@ -322,7 +381,7 @@ UPDATE customers SET
     reseller_id = $13, pppoe_username = $14, pppoe_password = $15, notes = $16,
     updated_at = now()
 WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
-RETURNING id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until
+RETURNING id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until, portal_password_hash
 `
 
 type UpdateCustomerParams struct {
@@ -387,6 +446,7 @@ func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) 
 		&i.UpdatedAt,
 		&i.DeletedAt,
 		&i.ActiveUntil,
+		&i.PortalPasswordHash,
 	)
 	return i, err
 }

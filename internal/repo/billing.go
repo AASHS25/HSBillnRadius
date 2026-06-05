@@ -313,3 +313,15 @@ func (r *billingRepo) UpsertGatewayConfig(ctx context.Context, cfg billing.Gatew
 	cfg.ID = m.ID
 	return cfg, nil
 }
+
+func (r *billingRepo) ListInvoicesByCustomer(ctx context.Context, tenantID, customerID int64, limit, offset int32) ([]billing.Invoice, error) {
+	rows, err := r.q.ListInvoicesByCustomer(ctx, sqlc.ListInvoicesByCustomerParams{TenantID: tenantID, CustomerID: customerID, Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, fmt.Errorf("list invoices by customer: %w", err)
+	}
+	out := make([]billing.Invoice, len(rows))
+	for i, m := range rows {
+		out[i] = toDomainInvoice(m)
+	}
+	return out, nil
+}

@@ -57,6 +57,20 @@ func RequirePermission(code string, log *slog.Logger) func(http.Handler) http.Ha
 	}
 }
 
+// RequireCustomer enforces that the token is a client-area (portal) token.
+func RequireCustomer(log *slog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			claims, ok := ClaimsFromContext(r.Context())
+			if !ok || claims.CustomerID == 0 {
+				writeError(w, log, token.ErrInvalidToken)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // bearerToken extracts the token from an "Authorization: Bearer <token>" header.
 func bearerToken(r *http.Request) (string, error) {
 	const prefix = "Bearer "

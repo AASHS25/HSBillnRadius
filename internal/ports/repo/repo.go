@@ -103,6 +103,8 @@ type CustomerRepository interface {
 	SetActiveUntil(ctx context.Context, tenantID, id int64, until time.Time, status customer.Status) error
 	ListExpiredActive(ctx context.Context, limit int32) ([]customer.Expired, error)
 	ListWithLocation(ctx context.Context, tenantID int64) ([]customer.Location, error)
+	GetByNo(ctx context.Context, tenantID int64, customerNo string) (customer.Customer, error)
+	SetPortalPassword(ctx context.Context, tenantID, id int64, hash string) error
 }
 
 // TicketRepository persists support tickets and their events.
@@ -113,6 +115,7 @@ type TicketRepository interface {
 	UpdateStatus(ctx context.Context, tenantID, id int64, status ticket.Status) error
 	AddEvent(ctx context.Context, e ticket.Event) (ticket.Event, error)
 	ListEvents(ctx context.Context, ticketID int64) ([]ticket.Event, error)
+	ListByCustomer(ctx context.Context, tenantID, customerID int64, limit, offset int32) ([]ticket.Ticket, error)
 }
 
 // BillingRepository persists invoices, items, payments and the cashbook ledger.
@@ -136,6 +139,7 @@ type BillingRepository interface {
 	ListPendingGatewayPayments(ctx context.Context, olderThan time.Time, limit int32) ([]billing.Payment, error)
 	GetGatewayConfig(ctx context.Context, tenantID int64, provider string) (billing.GatewayConfig, error)
 	UpsertGatewayConfig(ctx context.Context, cfg billing.GatewayConfig) (billing.GatewayConfig, error)
+	ListInvoicesByCustomer(ctx context.Context, tenantID, customerID int64, limit, offset int32) ([]billing.Invoice, error)
 }
 
 // RadiusAuthRepository is the read side used by the radius-service during

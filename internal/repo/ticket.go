@@ -88,3 +88,15 @@ func (r *ticketRepo) ListEvents(ctx context.Context, ticketID int64) ([]ticket.E
 	}
 	return out, nil
 }
+
+func (r *ticketRepo) ListByCustomer(ctx context.Context, tenantID, customerID int64, limit, offset int32) ([]ticket.Ticket, error) {
+	rows, err := r.q.ListTicketsByCustomer(ctx, sqlc.ListTicketsByCustomerParams{TenantID: tenantID, CustomerID: pgInt8Ptr(&customerID), Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, fmt.Errorf("list tickets by customer: %w", err)
+	}
+	out := make([]ticket.Ticket, len(rows))
+	for i, m := range rows {
+		out[i] = toDomainTicket(m)
+	}
+	return out, nil
+}

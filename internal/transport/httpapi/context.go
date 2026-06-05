@@ -36,3 +36,11 @@ func UserID(ctx context.Context) int64 {
 	}
 	return 0
 }
+
+// CustomerID returns the authenticated client-area customer id, or 0.
+func CustomerID(ctx context.Context) int64 {
+	if c, ok := ClaimsFromContext(ctx); ok {
+		return c.CustomerID
+	}
+	return 0
+}

@@ -104,7 +104,7 @@ func run() error {
 	tokens := token.NewManager(cfg.Auth.JWTSecret, cfg.Auth.JWTIssuer, cfg.Auth.AccessTokenTTL)
 	authService := authsvc.New(repos, store, hasher, tokens, cfg.Auth.RefreshTokenTTL, log)
 	planService := plansvc.New(repos, store, log)
-	customerService := customersvc.New(repos, store, log)
+	customerService := customersvc.New(repos, store, log).WithHasher(hasher)
 	coaClient := radiusclient.New(cfg.Radius.CoAPort, cfg.Radius.RequestTimeout)
 	coaService := coasvc.New(repos, coaClient, cache.NewRedis(rdb), log)
 	httpClient := &http.Client{Timeout: cfg.Worker.HTTPTimeout}

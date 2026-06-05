@@ -344,3 +344,8 @@ func (s *Service) audit(ctx context.Context, r repo.Repositories, tenantID, acto
 		s.log.WarnContext(ctx, "audit insert failed", slog.Any("error", err), slog.String("action", action))
 	}
 }
+
+// ListByCustomer returns a customer's invoices (client area).
+func (s *Service) ListByCustomer(ctx context.Context, tenantID, customerID int64, limit, offset int32) ([]billing.Invoice, error) {
+	return s.repos.Billing.ListInvoicesByCustomer(ctx, tenantID, customerID, limit, offset)
+}

@@ -75,7 +75,8 @@ func writeError(w http.ResponseWriter, log *slog.Logger, err error) {
 // classify maps a domain error to an HTTP status and stable error code.
 func classify(err error) (int, string) {
 	switch {
-	case errors.Is(err, iam.ErrInvalidCredential), errors.Is(err, token.ErrInvalidToken):
+	case errors.Is(err, iam.ErrInvalidCredential), errors.Is(err, token.ErrInvalidToken),
+		errors.Is(err, customer.ErrPortalInvalid):
 		return http.StatusUnauthorized, "unauthorized"
 	case errors.Is(err, iam.ErrUserInactive):
 		return http.StatusForbidden, "forbidden"

@@ -38,31 +38,33 @@ var (
 	ErrInvalidCust   = errors.New("invalid customer")
 	ErrPlanRequired  = errors.New("plan is required for service provisioning")
 	ErrCredsRequired = errors.New("pppoe username and password are required")
+	ErrPortalInvalid = errors.New("invalid portal credentials")
 )
 
 // Customer is a subscriber.
 type Customer struct {
-	ID            int64
-	TenantID      int64
-	CustomerNo    string
-	Name          string
-	IDCardNo      string
-	Email         string
-	PhoneWA       string
-	Address       string
-	Lat           *float64
-	Lng           *float64
-	InstallDate   *time.Time
-	Status        Status
-	PlanID        *int64
-	ResellerID    *int64
-	BalanceIDR    int64
-	PppoeUsername string
-	PppoePassword string
-	Notes         string
-	ActiveUntil   *time.Time
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID                 int64
+	TenantID           int64
+	CustomerNo         string
+	Name               string
+	IDCardNo           string
+	Email              string
+	PhoneWA            string
+	Address            string
+	Lat                *float64
+	Lng                *float64
+	InstallDate        *time.Time
+	Status             Status
+	PlanID             *int64
+	ResellerID         *int64
+	BalanceIDR         int64
+	PppoeUsername      string
+	PppoePassword      string
+	PortalPasswordHash string // never serialized to clients
+	Notes              string
+	ActiveUntil        *time.Time
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 // HasPPPoECredentials reports whether the customer has a username+password set.

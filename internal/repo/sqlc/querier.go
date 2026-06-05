@@ -47,6 +47,7 @@ type Querier interface {
 	GetActiveGateway(ctx context.Context, tenantID int64) (WaGateway, error)
 	GetBandwidthProfileByPlan(ctx context.Context, planID int64) (BandwidthProfile, error)
 	GetCustomerByID(ctx context.Context, arg GetCustomerByIDParams) (Customer, error)
+	GetCustomerByNo(ctx context.Context, arg GetCustomerByNoParams) (Customer, error)
 	GetInvoiceByID(ctx context.Context, arg GetInvoiceByIDParams) (Invoice, error)
 	// Read-side queries used by the radius-service auth handler.
 	GetNasByIP(ctx context.Context, nasname string) (GetNasByIPRow, error)
@@ -99,6 +100,7 @@ type Querier interface {
 	ListRolesByTenant(ctx context.Context, tenantID int64) ([]Role, error)
 	ListTicketEvents(ctx context.Context, ticketID int64) ([]TicketEvent, error)
 	ListTickets(ctx context.Context, arg ListTicketsParams) ([]Ticket, error)
+	ListTicketsByCustomer(ctx context.Context, arg ListTicketsByCustomerParams) ([]Ticket, error)
 	ListUsersByTenant(ctx context.Context, arg ListUsersByTenantParams) ([]User, error)
 	ListVoucherBatches(ctx context.Context, arg ListVoucherBatchesParams) ([]VoucherBatch, error)
 	ListVouchersByBatch(ctx context.Context, arg ListVouchersByBatchParams) ([]Voucher, error)
@@ -112,6 +114,7 @@ type Querier interface {
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
 	SetCustomerActiveUntil(ctx context.Context, arg SetCustomerActiveUntilParams) error
 	SetInvoiceStatus(ctx context.Context, arg SetInvoiceStatusParams) error
+	SetPortalPassword(ctx context.Context, arg SetPortalPasswordParams) error
 	SetRadUserGroup(ctx context.Context, arg SetRadUserGroupParams) error
 	SettlePayment(ctx context.Context, arg SettlePaymentParams) error
 	SoftDeleteCustomer(ctx context.Context, arg SoftDeleteCustomerParams) error

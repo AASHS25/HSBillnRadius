@@ -27,6 +27,7 @@ type AccessClaims struct {
 	TenantID    int64    `json:"tid"`
 	UserID      int64    `json:"uid"`
 	RoleID      int64    `json:"rid"`
+	CustomerID  int64    `json:"cid,omitempty"` // set for client-area (portal) tokens
 	Permissions []string `json:"perms"`
 }
 
@@ -47,6 +48,7 @@ type AccessInput struct {
 	TenantID    int64
 	UserID      int64
 	RoleID      int64
+	CustomerID  int64
 	Permissions []string
 }
 
@@ -66,6 +68,7 @@ func (m *Manager) IssueAccess(in AccessInput) (string, time.Time, error) {
 		TenantID:    in.TenantID,
 		UserID:      in.UserID,
 		RoleID:      in.RoleID,
+		CustomerID:  in.CustomerID,
 		Permissions: in.Permissions,
 	}
 
