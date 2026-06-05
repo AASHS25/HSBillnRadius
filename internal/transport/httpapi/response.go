@@ -8,7 +8,9 @@ import (
 
 	"github.com/go-playground/validator/v10"
 
+	"github.com/aashs25/hsbillnradius/internal/domain/customer"
 	"github.com/aashs25/hsbillnradius/internal/domain/iam"
+	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 	"github.com/aashs25/hsbillnradius/internal/platform/token"
 )
@@ -74,11 +76,18 @@ func classify(err error) (int, string) {
 		return http.StatusUnauthorized, "unauthorized"
 	case errors.Is(err, iam.ErrUserInactive):
 		return http.StatusForbidden, "forbidden"
-	case errors.Is(err, iam.ErrUserNotFound), errors.Is(err, tenant.ErrNotFound), errors.Is(err, iam.ErrRoleNotFound):
+	case errors.Is(err, iam.ErrUserNotFound), errors.Is(err, tenant.ErrNotFound),
+		errors.Is(err, iam.ErrRoleNotFound), errors.Is(err, plan.ErrNotFound),
+		errors.Is(err, customer.ErrNotFound):
 		return http.StatusNotFound, "not_found"
-	case errors.Is(err, iam.ErrEmailTaken), errors.Is(err, tenant.ErrSlugTaken):
+	case errors.Is(err, iam.ErrEmailTaken), errors.Is(err, tenant.ErrSlugTaken),
+		errors.Is(err, plan.ErrNameTaken), errors.Is(err, customer.ErrNoTaken),
+		errors.Is(err, customer.ErrUsernameTaken):
 		return http.StatusConflict, "conflict"
-	case errors.Is(err, iam.ErrWeakPassword), errors.Is(err, iam.ErrInvalidEmail), errors.Is(err, tenant.ErrInvalidSlug):
+	case errors.Is(err, iam.ErrWeakPassword), errors.Is(err, iam.ErrInvalidEmail),
+		errors.Is(err, tenant.ErrInvalidSlug), errors.Is(err, plan.ErrInvalidPlan),
+		errors.Is(err, plan.ErrInvalidPrice), errors.Is(err, customer.ErrInvalidCust),
+		errors.Is(err, customer.ErrPlanRequired), errors.Is(err, customer.ErrCredsRequired):
 		return http.StatusUnprocessableEntity, "invalid_input"
 	default:
 		return http.StatusInternalServerError, "internal_error"

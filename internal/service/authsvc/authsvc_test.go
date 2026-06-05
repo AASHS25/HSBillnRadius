@@ -14,15 +14,16 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 	"github.com/aashs25/hsbillnradius/internal/platform/password"
 	"github.com/aashs25/hsbillnradius/internal/platform/token"
+	"github.com/aashs25/hsbillnradius/internal/repo/memrepo"
 	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
 )
 
-func newService() (*authsvc.Service, *fakeStore) {
-	store := newFakeStore()
+func newService() (*authsvc.Service, *memrepo.Store) {
+	store := memrepo.New()
 	hasher := password.NewHasher()
 	tokens := token.NewManager("test-secret-of-sufficient-length-xx", "billing-radius", 15*time.Minute)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
-	svc := authsvc.New(store.repos(), store, hasher, tokens, 24*time.Hour, log)
+	svc := authsvc.New(store.Repositories(), store, hasher, tokens, 24*time.Hour, log)
 	return svc, store
 }
 
@@ -120,11 +121,7 @@ func TestLogin_Failures(t *testing.T) {
 		assert.ErrorIs(t, err, iam.ErrInvalidCredential)
 	})
 	t.Run("inactive user", func(t *testing.T) {
-		store.d.mu.Lock()
-		u := store.d.users[res.User.ID]
-		u.IsActive = false
-		store.d.users[res.User.ID] = u
-		store.d.mu.Unlock()
+		store.SetUserActive(res.User.ID, false)
 
 		_, err := svc.Login(context.Background(), authsvc.LoginInput{TenantSlug: "acme", Email: "owner@acme.test", Password: "password123"})
 		assert.ErrorIs(t, err, iam.ErrUserInactive)
@@ -153,12 +150,7 @@ func TestRefresh_Expired(t *testing.T) {
 	svc, store := newService()
 	res := register(t, svc)
 
-	hash := token.HashRefresh(res.RefreshToken)
-	store.d.mu.Lock()
-	tk := store.d.tokens[hash]
-	tk.ExpiresAt = time.Now().Add(-time.Hour)
-	store.d.tokens[hash] = tk
-	store.d.mu.Unlock()
+	store.ExpireToken(token.HashRefresh(res.RefreshToken))
 
 	_, err := svc.Refresh(context.Background(), authsvc.RefreshInput{RefreshToken: res.RefreshToken})
 	assert.ErrorIs(t, err, iam.ErrInvalidCredential)

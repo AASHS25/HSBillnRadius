@@ -8,7 +8,10 @@ import (
 	"context"
 
 	"github.com/aashs25/hsbillnradius/internal/domain/audit"
+	"github.com/aashs25/hsbillnradius/internal/domain/customer"
 	"github.com/aashs25/hsbillnradius/internal/domain/iam"
+	"github.com/aashs25/hsbillnradius/internal/domain/plan"
+	"github.com/aashs25/hsbillnradius/internal/domain/radius"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 )
 
@@ -66,6 +69,43 @@ type AuditRepository interface {
 	List(ctx context.Context, tenantID int64, limit, offset int32) ([]audit.Entry, error)
 }
 
+// PlanRepository persists service plans.
+type PlanRepository interface {
+	Create(ctx context.Context, p plan.Plan) (plan.Plan, error)
+	GetByID(ctx context.Context, tenantID, id int64) (plan.Plan, error)
+	List(ctx context.Context, tenantID int64, limit, offset int32) ([]plan.Plan, error)
+	Count(ctx context.Context, tenantID int64) (int64, error)
+	Update(ctx context.Context, p plan.Plan) (plan.Plan, error)
+	SoftDelete(ctx context.Context, tenantID, id int64) error
+}
+
+// BandwidthProfileRepository persists per-plan bandwidth profiles.
+type BandwidthProfileRepository interface {
+	Upsert(ctx context.Context, b plan.BandwidthProfile) (plan.BandwidthProfile, error)
+	GetByPlan(ctx context.Context, planID int64) (plan.BandwidthProfile, error)
+}
+
+// CustomerRepository persists subscribers.
+type CustomerRepository interface {
+	Create(ctx context.Context, c customer.Customer) (customer.Customer, error)
+	GetByID(ctx context.Context, tenantID, id int64) (customer.Customer, error)
+	List(ctx context.Context, tenantID int64, limit, offset int32) ([]customer.Customer, error)
+	Count(ctx context.Context, tenantID int64) (int64, error)
+	Update(ctx context.Context, c customer.Customer) (customer.Customer, error)
+	UpdateStatus(ctx context.Context, tenantID, id int64, status customer.Status) error
+	SoftDelete(ctx context.Context, tenantID, id int64) error
+}
+
+// RadiusMapRepository writes the FreeRADIUS provisioning tables (radcheck,
+// radusergroup, radgroupreply) when customers and plans change.
+type RadiusMapRepository interface {
+	SetUserPassword(ctx context.Context, tenantID int64, username, password string) error
+	SetUserGroup(ctx context.Context, tenantID int64, username, groupname string, priority int32) error
+	ClearUser(ctx context.Context, tenantID int64, username string) error
+	SetGroupReply(ctx context.Context, tenantID int64, groupname string, attrs []radius.Attr) error
+	UserGroups(ctx context.Context, tenantID int64, username string) ([]radius.UserGroup, error)
+}
+
 // Repositories bundles every repository so they can be passed together and,
 // inside a transaction, share the same connection.
 type Repositories struct {
@@ -75,6 +115,10 @@ type Repositories struct {
 	Permission   PermissionRepository
 	RefreshToken RefreshTokenRepository
 	Audit        AuditRepository
+	Plan         PlanRepository
+	Bandwidth    BandwidthProfileRepository
+	Customer     CustomerRepository
+	RadiusMap    RadiusMapRepository
 }
 
 // TxManager runs fn inside a database transaction, providing repositories bound

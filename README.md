@@ -117,6 +117,8 @@ Semua di bawah `/api/v1`. Auth pakai `Authorization: Bearer <access_token>`.
 | GET | `/me` | Bearer | Profil user + tenant + permissions |
 | GET | `/users` | `user.read` | Daftar user (tenant-scoped, paginated) |
 | GET | `/audit-logs` | `tenant.read` | Audit log tenant |
+| CRUD | `/plans` | `plan.manage` | Paket + bandwidth profile → sync radgroupreply |
+| CRUD | `/customers` | `customer.*` | Pelanggan → sync radcheck/radusergroup (PPPoE) |
 
 ```bash
 curl -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/json' \
@@ -130,8 +132,9 @@ curl -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/j
 - [x] **M1 — Tenancy & Auth**: tenants/users/roles/permissions/refresh_tokens,
   register/login/refresh/logout, argon2id, JWT access+refresh (rotating +
   reuse detection), RBAC middleware, multi-tenant context, audit log. sqlc.
-- [ ] **M2 — Customer & Plan**: CRUD pelanggan, paket, bandwidth profile,
-  mapping ke radcheck/radusergroup/radgroupreply.
+- [x] **M2 — Customer & Plan**: CRUD pelanggan, paket, bandwidth profile,
+  mapping otomatis ke radcheck/radusergroup/radgroupreply (Mikrotik-Rate-Limit,
+  Framed-Pool), grup isolir. sqlc + in-memory repo untuk test.
 - [ ] **M3 — RADIUS (Auth)** · **M4 — Accounting + CoA**
 - [ ] **M5 — Billing** · **M6 — Notifikasi WA** · **M7 — Payment Gateway**
 - [ ] **M8 — Voucher & Hotspot** · **M9 — Jaringan (OLT/ACS)** · **M10 — Client area + hardening**

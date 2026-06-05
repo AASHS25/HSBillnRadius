@@ -6,7 +6,9 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/aashs25/hsbillnradius/internal/domain/audit"
+	"github.com/aashs25/hsbillnradius/internal/domain/customer"
 	"github.com/aashs25/hsbillnradius/internal/domain/iam"
+	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 	"github.com/aashs25/hsbillnradius/internal/repo/sqlc"
 )
@@ -61,6 +63,40 @@ func jsonOrEmpty(b []byte) []byte {
 		return []byte("{}")
 	}
 	return b
+}
+
+// pgFloat8Ptr maps a *float64 to a nullable float8.
+func pgFloat8Ptr(p *float64) pgtype.Float8 {
+	if p == nil {
+		return pgtype.Float8{}
+	}
+	return pgtype.Float8{Float64: *p, Valid: true}
+}
+
+// float8Ptr maps a nullable float8 back to *float64.
+func float8Ptr(v pgtype.Float8) *float64 {
+	if !v.Valid {
+		return nil
+	}
+	f := v.Float64
+	return &f
+}
+
+// pgDatePtr maps a *time.Time to a nullable date.
+func pgDatePtr(p *time.Time) pgtype.Date {
+	if p == nil {
+		return pgtype.Date{}
+	}
+	return pgtype.Date{Time: *p, Valid: true}
+}
+
+// datePtr maps a nullable date back to *time.Time.
+func datePtr(v pgtype.Date) *time.Time {
+	if !v.Valid {
+		return nil
+	}
+	t := v.Time
+	return &t
 }
 
 // --- model -> domain mappers ------------------------------------------------
@@ -122,6 +158,68 @@ func toDomainRefreshToken(m sqlc.RefreshToken) iam.RefreshToken {
 		UserAgent: m.UserAgent,
 		IP:        textVal(m.Ip),
 		CreatedAt: m.CreatedAt,
+	}
+}
+
+func toDomainPlan(m sqlc.Plan) plan.Plan {
+	return plan.Plan{
+		ID:           m.ID,
+		TenantID:     m.TenantID,
+		Name:         m.Name,
+		ServiceType:  plan.ServiceType(m.ServiceType),
+		PriceIDR:     m.PriceIdr,
+		TaxBps:       m.TaxBps,
+		BillingCycle: plan.BillingCycle(m.BillingCycle),
+		ActiveDays:   m.ActiveDays,
+		DataQuotaMB:  int8Ptr(m.DataQuotaMb),
+		TimeQuotaSec: int8Ptr(m.TimeQuotaSec),
+		IsUnlimited:  m.IsUnlimited,
+		PoolName:     m.PoolName,
+		IsolirPlanID: int8Ptr(m.IsolirPlanID),
+		CreatedAt:    m.CreatedAt,
+		UpdatedAt:    m.UpdatedAt,
+	}
+}
+
+func toDomainBandwidth(m sqlc.BandwidthProfile) plan.BandwidthProfile {
+	return plan.BandwidthProfile{
+		ID:                 m.ID,
+		TenantID:           m.TenantID,
+		PlanID:             m.PlanID,
+		RateLimitRx:        m.RateLimitRx,
+		RateLimitTx:        m.RateLimitTx,
+		BurstRx:            m.BurstRx,
+		BurstTx:            m.BurstTx,
+		BurstThresholdRx:   m.BurstThresholdRx,
+		BurstThresholdTx:   m.BurstThresholdTx,
+		BurstTime:          m.BurstTime,
+		Priority:           m.Priority,
+		MikrotikRateString: m.MikrotikRateString,
+	}
+}
+
+func toDomainCustomer(m sqlc.Customer) customer.Customer {
+	return customer.Customer{
+		ID:            m.ID,
+		TenantID:      m.TenantID,
+		CustomerNo:    m.CustomerNo,
+		Name:          m.Name,
+		IDCardNo:      m.IDCardNo,
+		Email:         m.Email,
+		PhoneWA:       m.PhoneWa,
+		Address:       m.Address,
+		Lat:           float8Ptr(m.Lat),
+		Lng:           float8Ptr(m.Lng),
+		InstallDate:   datePtr(m.InstallDate),
+		Status:        customer.Status(m.Status),
+		PlanID:        int8Ptr(m.PlanID),
+		ResellerID:    int8Ptr(m.ResellerID),
+		BalanceIDR:    m.BalanceIdr,
+		PppoeUsername: textVal(m.PppoeUsername),
+		PppoePassword: textVal(m.PppoePassword),
+		Notes:         m.Notes,
+		CreatedAt:     m.CreatedAt,
+		UpdatedAt:     m.UpdatedAt,
 	}
 }
 

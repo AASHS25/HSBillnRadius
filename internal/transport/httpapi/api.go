@@ -14,23 +14,29 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
+	"github.com/aashs25/hsbillnradius/internal/service/customersvc"
+	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
 )
 
 // API wires the service layer into HTTP handlers.
 type API struct {
-	auth   *authsvc.Service
-	tokens AccessParser
-	valid  *validator.Validate
-	log    *slog.Logger
+	auth      *authsvc.Service
+	plans     *plansvc.Service
+	customers *customersvc.Service
+	tokens    AccessParser
+	valid     *validator.Validate
+	log       *slog.Logger
 }
 
 // New builds the API delivery layer.
-func New(auth *authsvc.Service, tokens AccessParser, log *slog.Logger) *API {
+func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, tokens AccessParser, log *slog.Logger) *API {
 	return &API{
-		auth:   auth,
-		tokens: tokens,
-		valid:  validator.New(validator.WithRequiredStructEnabled()),
-		log:    log,
+		auth:      auth,
+		plans:     plans,
+		customers: customers,
+		tokens:    tokens,
+		valid:     validator.New(validator.WithRequiredStructEnabled()),
+		log:       log,
 	}
 }
 
@@ -50,8 +56,34 @@ func (a *API) Mount(r chi.Router) {
 			r.Get("/me", a.handleMe)
 			r.With(RequirePermission("user.read", a.log)).Get("/users", a.handleListUsers)
 			r.With(RequirePermission("tenant.read", a.log)).Get("/audit-logs", a.handleListAuditLogs)
+
+			r.Route("/plans", func(r chi.Router) {
+				r.Use(RequirePermission("plan.manage", a.log))
+				r.Post("/", a.handleCreatePlan)
+				r.Get("/", a.handleListPlans)
+				r.Get("/{id}", a.handleGetPlan)
+				r.Put("/{id}", a.handleUpdatePlan)
+				r.Delete("/{id}", a.handleDeletePlan)
+			})
+
+			r.Route("/customers", func(r chi.Router) {
+				r.With(RequirePermission("customer.create", a.log)).Post("/", a.handleCreateCustomer)
+				r.With(RequirePermission("customer.read", a.log)).Get("/", a.handleListCustomers)
+				r.With(RequirePermission("customer.read", a.log)).Get("/{id}", a.handleGetCustomer)
+				r.With(RequirePermission("customer.update", a.log)).Put("/{id}", a.handleUpdateCustomer)
+				r.With(RequirePermission("customer.delete", a.log)).Delete("/{id}", a.handleDeleteCustomer)
+			})
 		})
 	})
+}
+
+// parseIDParam reads a positive int64 path parameter.
+func parseIDParam(r *http.Request, name string) (int64, error) {
+	id, err := strconv.ParseInt(chi.URLParam(r, name), 10, 64)
+	if err != nil || id <= 0 {
+		return 0, errBadRequest("invalid " + name)
+	}
+	return id, nil
 }
 
 // pagination parses limit/offset query params with sane bounds.

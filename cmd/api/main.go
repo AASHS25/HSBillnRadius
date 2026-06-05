@@ -25,6 +25,8 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/platform/token"
 	"github.com/aashs25/hsbillnradius/internal/repo"
 	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
+	"github.com/aashs25/hsbillnradius/internal/service/customersvc"
+	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
 	"github.com/aashs25/hsbillnradius/internal/transport/httpapi"
 )
 
@@ -82,10 +84,13 @@ func run() error {
 
 	// Compose the auth stack: repositories, crypto, token manager, services.
 	store := repo.NewStore(pool)
+	repos := store.Repositories()
 	hasher := password.NewHasher()
 	tokens := token.NewManager(cfg.Auth.JWTSecret, cfg.Auth.JWTIssuer, cfg.Auth.AccessTokenTTL)
-	authService := authsvc.New(store.Repositories(), store, hasher, tokens, cfg.Auth.RefreshTokenTTL, log)
-	api := httpapi.New(authService, tokens, log)
+	authService := authsvc.New(repos, store, hasher, tokens, cfg.Auth.RefreshTokenTTL, log)
+	planService := plansvc.New(repos, store, log)
+	customerService := customersvc.New(repos, store, log)
+	api := httpapi.New(authService, planService, customerService, tokens, log)
 
 	router := newRouter(cfg, log, pool, rdb, api)
 

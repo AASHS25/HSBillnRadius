@@ -46,6 +46,10 @@ func buildRepos(q *sqlc.Queries) port.Repositories {
 		Permission:   &permissionRepo{q: q},
 		RefreshToken: &refreshTokenRepo{q: q},
 		Audit:        &auditRepo{q: q},
+		Plan:         &planRepo{q: q},
+		Bandwidth:    &bandwidthRepo{q: q},
+		Customer:     &customerRepo{q: q},
+		RadiusMap:    &radiusMapRepo{q: q},
 	}
 }
 

@@ -12,6 +12,139 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type BillingCycle string
+
+const (
+	BillingCycleMonthly      BillingCycle = "monthly"
+	BillingCycleFixed        BillingCycle = "fixed"
+	BillingCycleProfile      BillingCycle = "profile"
+	BillingCyclePrepaidTopup BillingCycle = "prepaid_topup"
+)
+
+func (e *BillingCycle) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BillingCycle(s)
+	case string:
+		*e = BillingCycle(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BillingCycle: %T", src)
+	}
+	return nil
+}
+
+type NullBillingCycle struct {
+	BillingCycle BillingCycle `json:"billing_cycle"`
+	Valid        bool         `json:"valid"` // Valid is true if BillingCycle is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBillingCycle) Scan(value interface{}) error {
+	if value == nil {
+		ns.BillingCycle, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BillingCycle.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBillingCycle) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BillingCycle), nil
+}
+
+type CustomerStatus string
+
+const (
+	CustomerStatusNew        CustomerStatus = "new"
+	CustomerStatusActive     CustomerStatus = "active"
+	CustomerStatusIsolated   CustomerStatus = "isolated"
+	CustomerStatusSuspended  CustomerStatus = "suspended"
+	CustomerStatusTerminated CustomerStatus = "terminated"
+	CustomerStatusFree       CustomerStatus = "free"
+)
+
+func (e *CustomerStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = CustomerStatus(s)
+	case string:
+		*e = CustomerStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for CustomerStatus: %T", src)
+	}
+	return nil
+}
+
+type NullCustomerStatus struct {
+	CustomerStatus CustomerStatus `json:"customer_status"`
+	Valid          bool           `json:"valid"` // Valid is true if CustomerStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullCustomerStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.CustomerStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.CustomerStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullCustomerStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.CustomerStatus), nil
+}
+
+type ServiceType string
+
+const (
+	ServiceTypePppoe   ServiceType = "pppoe"
+	ServiceTypeHotspot ServiceType = "hotspot"
+	ServiceTypeDhcp    ServiceType = "dhcp"
+)
+
+func (e *ServiceType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ServiceType(s)
+	case string:
+		*e = ServiceType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ServiceType: %T", src)
+	}
+	return nil
+}
+
+type NullServiceType struct {
+	ServiceType ServiceType `json:"service_type"`
+	Valid       bool        `json:"valid"` // Valid is true if ServiceType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullServiceType) Scan(value interface{}) error {
+	if value == nil {
+		ns.ServiceType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ServiceType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullServiceType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ServiceType), nil
+}
+
 type TenantStatus string
 
 const (
@@ -68,11 +201,138 @@ type AuditLog struct {
 	CreatedAt   time.Time   `json:"created_at"`
 }
 
+type BandwidthProfile struct {
+	ID                 int64     `json:"id"`
+	TenantID           int64     `json:"tenant_id"`
+	PlanID             int64     `json:"plan_id"`
+	RateLimitRx        string    `json:"rate_limit_rx"`
+	RateLimitTx        string    `json:"rate_limit_tx"`
+	BurstRx            string    `json:"burst_rx"`
+	BurstTx            string    `json:"burst_tx"`
+	BurstThresholdRx   string    `json:"burst_threshold_rx"`
+	BurstThresholdTx   string    `json:"burst_threshold_tx"`
+	BurstTime          string    `json:"burst_time"`
+	Priority           int32     `json:"priority"`
+	MikrotikRateString string    `json:"mikrotik_rate_string"`
+	CreatedAt          time.Time `json:"created_at"`
+	UpdatedAt          time.Time `json:"updated_at"`
+}
+
+type Customer struct {
+	ID            int64              `json:"id"`
+	TenantID      int64              `json:"tenant_id"`
+	CustomerNo    string             `json:"customer_no"`
+	Name          string             `json:"name"`
+	IDCardNo      string             `json:"id_card_no"`
+	Email         string             `json:"email"`
+	PhoneWa       string             `json:"phone_wa"`
+	Address       string             `json:"address"`
+	Lat           pgtype.Float8      `json:"lat"`
+	Lng           pgtype.Float8      `json:"lng"`
+	InstallDate   pgtype.Date        `json:"install_date"`
+	Status        CustomerStatus     `json:"status"`
+	PlanID        pgtype.Int8        `json:"plan_id"`
+	ResellerID    pgtype.Int8        `json:"reseller_id"`
+	BalanceIdr    int64              `json:"balance_idr"`
+	PppoeUsername pgtype.Text        `json:"pppoe_username"`
+	PppoePassword pgtype.Text        `json:"pppoe_password"`
+	Notes         string             `json:"notes"`
+	CreatedAt     time.Time          `json:"created_at"`
+	UpdatedAt     time.Time          `json:"updated_at"`
+	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type CustomerDocument struct {
+	ID         int64     `json:"id"`
+	CustomerID int64     `json:"customer_id"`
+	Type       string    `json:"type"`
+	FilePath   string    `json:"file_path"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+type Na struct {
+	ID          int64       `json:"id"`
+	TenantID    int64       `json:"tenant_id"`
+	Nasname     string      `json:"nasname"`
+	Shortname   string      `json:"shortname"`
+	Type        string      `json:"type"`
+	Ports       pgtype.Int4 `json:"ports"`
+	Secret      string      `json:"secret"`
+	Server      string      `json:"server"`
+	Community   string      `json:"community"`
+	Description string      `json:"description"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
+}
+
 type Permission struct {
 	ID          int64     `json:"id"`
 	Code        string    `json:"code"`
 	Description string    `json:"description"`
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+type Plan struct {
+	ID           int64              `json:"id"`
+	TenantID     int64              `json:"tenant_id"`
+	Name         string             `json:"name"`
+	ServiceType  ServiceType        `json:"service_type"`
+	PriceIdr     int64              `json:"price_idr"`
+	TaxBps       int32              `json:"tax_bps"`
+	BillingCycle BillingCycle       `json:"billing_cycle"`
+	ActiveDays   int32              `json:"active_days"`
+	DataQuotaMb  pgtype.Int8        `json:"data_quota_mb"`
+	TimeQuotaSec pgtype.Int8        `json:"time_quota_sec"`
+	IsUnlimited  bool               `json:"is_unlimited"`
+	PoolName     string             `json:"pool_name"`
+	IsolirPlanID pgtype.Int8        `json:"isolir_plan_id"`
+	CreatedAt    time.Time          `json:"created_at"`
+	UpdatedAt    time.Time          `json:"updated_at"`
+	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
+}
+
+type Radcheck struct {
+	ID        int64  `json:"id"`
+	TenantID  int64  `json:"tenant_id"`
+	Username  string `json:"username"`
+	Attribute string `json:"attribute"`
+	Op        string `json:"op"`
+	Value     string `json:"value"`
+}
+
+type Radgroupcheck struct {
+	ID        int64  `json:"id"`
+	TenantID  int64  `json:"tenant_id"`
+	Groupname string `json:"groupname"`
+	Attribute string `json:"attribute"`
+	Op        string `json:"op"`
+	Value     string `json:"value"`
+}
+
+type Radgroupreply struct {
+	ID        int64  `json:"id"`
+	TenantID  int64  `json:"tenant_id"`
+	Groupname string `json:"groupname"`
+	Attribute string `json:"attribute"`
+	Op        string `json:"op"`
+	Value     string `json:"value"`
+}
+
+type Radreply struct {
+	ID        int64  `json:"id"`
+	TenantID  int64  `json:"tenant_id"`
+	Username  string `json:"username"`
+	Attribute string `json:"attribute"`
+	Op        string `json:"op"`
+	Value     string `json:"value"`
+}
+
+type Radusergroup struct {
+	ID        int64  `json:"id"`
+	TenantID  int64  `json:"tenant_id"`
+	Username  string `json:"username"`
+	Groupname string `json:"groupname"`
+	Priority  int32  `json:"priority"`
 }
 
 type RefreshToken struct {

@@ -12,12 +12,24 @@ import (
 
 type Querier interface {
 	AddRolePermission(ctx context.Context, arg AddRolePermissionParams) error
+	CountCustomersByTenant(ctx context.Context, tenantID int64) (int64, error)
+	CountPlansByTenant(ctx context.Context, tenantID int64) (int64, error)
 	CountUsersByTenant(ctx context.Context, tenantID int64) (int64, error)
+	CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error)
+	CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
 	CreateTenant(ctx context.Context, arg CreateTenantParams) (Tenant, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteExpiredRefreshTokens(ctx context.Context) (int64, error)
+	// Provisioning writes for RADIUS. Sync uses delete-then-insert for idempotency.
+	DeleteRadCheckByUser(ctx context.Context, arg DeleteRadCheckByUserParams) error
+	DeleteRadGroupReplyByGroup(ctx context.Context, arg DeleteRadGroupReplyByGroupParams) error
+	DeleteRadReplyByUser(ctx context.Context, arg DeleteRadReplyByUserParams) error
+	DeleteRadUserGroupByUser(ctx context.Context, arg DeleteRadUserGroupByUserParams) error
+	GetBandwidthProfileByPlan(ctx context.Context, planID int64) (BandwidthProfile, error)
+	GetCustomerByID(ctx context.Context, arg GetCustomerByIDParams) (Customer, error)
+	GetPlanByID(ctx context.Context, arg GetPlanByIDParams) (Plan, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
 	GetRoleByName(ctx context.Context, arg GetRoleByNameParams) (Role, error)
@@ -28,19 +40,33 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GrantAllPermissionsToRole(ctx context.Context, roleID int64) error
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
+	InsertRadCheck(ctx context.Context, arg InsertRadCheckParams) error
+	InsertRadGroupReply(ctx context.Context, arg InsertRadGroupReplyParams) error
+	InsertRadReply(ctx context.Context, arg InsertRadReplyParams) error
+	InsertRadUserGroup(ctx context.Context, arg InsertRadUserGroupParams) error
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
+	ListCustomersByTenant(ctx context.Context, arg ListCustomersByTenantParams) ([]Customer, error)
 	ListPermissionCodesByRole(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionIDsByCodes(ctx context.Context, dollar_1 []string) ([]int64, error)
 	ListPermissions(ctx context.Context) ([]Permission, error)
+	ListPlansByTenant(ctx context.Context, arg ListPlansByTenantParams) ([]Plan, error)
+	ListRadUserGroups(ctx context.Context, arg ListRadUserGroupsParams) ([]ListRadUserGroupsRow, error)
 	ListRolesByTenant(ctx context.Context, tenantID int64) ([]Role, error)
 	ListUsersByTenant(ctx context.Context, arg ListUsersByTenantParams) ([]User, error)
 	RevokeAllUserRefreshTokens(ctx context.Context, userID int64) error
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
+	SetRadUserGroup(ctx context.Context, arg SetRadUserGroupParams) error
+	SoftDeleteCustomer(ctx context.Context, arg SoftDeleteCustomerParams) error
+	SoftDeletePlan(ctx context.Context, arg SoftDeletePlanParams) error
 	SoftDeleteUser(ctx context.Context, arg SoftDeleteUserParams) error
+	UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) (Customer, error)
+	UpdateCustomerStatus(ctx context.Context, arg UpdateCustomerStatusParams) error
+	UpdatePlan(ctx context.Context, arg UpdatePlanParams) (Plan, error)
 	UpdateTenant(ctx context.Context, arg UpdateTenantParams) (Tenant, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserLastLogin(ctx context.Context, id int64) error
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
+	UpsertBandwidthProfile(ctx context.Context, arg UpsertBandwidthProfileParams) (BandwidthProfile, error)
 }
 
 var _ Querier = (*Queries)(nil)
