@@ -1,0 +1,22 @@
+# Binaries
+/bin/
+*.exe
+*.out
+
+# Local env / secrets
+.env
+.env.*
+!configs/.env.example
+
+# Coverage
+coverage.out
+coverage.html
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+
+# Go workspace
+go.work
+go.work.sum

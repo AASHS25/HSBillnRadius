@@ -1,0 +1,11 @@
+.git
+.github
+bin
+*.out
+coverage.*
+.env
+.env.*
+!configs/.env.example
+deploy
+README.md
+test

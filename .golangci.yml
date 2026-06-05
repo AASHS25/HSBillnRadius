@@ -1,0 +1,34 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  # "standard" enables errcheck, govet, ineffassign, staticcheck and unused.
+  default: standard
+  enable:
+    - bodyclose
+    - errorlint
+    - misspell
+    - unconvert
+    - whitespace
+  exclusions:
+    generated: lax
+    rules:
+      # Generated sqlc code is not ours to lint.
+      - path: internal/repo/sqlc/
+        linters:
+          - errcheck
+          - staticcheck
+          - unused
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    gofmt:
+      simplify: true
+    goimports:
+      local-prefixes:
+        - github.com/aashs25/hsbillnradius

@@ -1,0 +1,113 @@
+name: billing-radius
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: billing_radius
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d billing_radius"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # ----------------------------------------------------------------------------
+  # Application services build from the single parameterized Dockerfile and only
+  # start under the "app" profile: `docker compose --profile app up --build`.
+  # Dev infra above starts by default with `docker compose up -d postgres redis`.
+  # ----------------------------------------------------------------------------
+  api:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE: api
+    environment:
+      APP_ENV: development
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/billing_radius?sslmode=disable
+      REDIS_ADDR: redis:6379
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  radius:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE: radius
+    environment:
+      APP_ENV: development
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/billing_radius?sslmode=disable
+      REDIS_ADDR: redis:6379
+    ports:
+      - "1812:1812/udp"
+      - "1813:1813/udp"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE: worker
+    environment:
+      APP_ENV: development
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/billing_radius?sslmode=disable
+      REDIS_ADDR: redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE: scheduler
+    environment:
+      APP_ENV: development
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/billing_radius?sslmode=disable
+      REDIS_ADDR: redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  redisdata:
