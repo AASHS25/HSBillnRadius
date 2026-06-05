@@ -9,9 +9,12 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+
+	"github.com/aashs25/hsbillnradius/internal/platform/ratelimit"
 
 	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/billingsvc"
@@ -33,13 +36,14 @@ type API struct {
 	payments  *paymentsvc.Service
 	vouchers  *vouchersvc.Service
 	tickets   *ticketsvc.Service
+	limiter   ratelimit.Limiter
 	tokens    AccessParser
 	valid     *validator.Validate
 	log       *slog.Logger
 }
 
 // New builds the API delivery layer.
-func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, vouchers *vouchersvc.Service, tickets *ticketsvc.Service, tokens AccessParser, log *slog.Logger) *API {
+func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, vouchers *vouchersvc.Service, tickets *ticketsvc.Service, limiter ratelimit.Limiter, tokens AccessParser, log *slog.Logger) *API {
 	return &API{
 		auth:      auth,
 		plans:     plans,
@@ -49,6 +53,7 @@ func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.S
 		payments:  payments,
 		vouchers:  vouchers,
 		tickets:   tickets,
+		limiter:   limiter,
 		tokens:    tokens,
 		valid:     validator.New(validator.WithRequiredStructEnabled()),
 		log:       log,
@@ -59,8 +64,9 @@ func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.S
 func (a *API) Mount(r chi.Router) {
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
-			r.Post("/register", a.handleRegister)
-			r.Post("/login", a.handleLogin)
+			// Throttle credential endpoints per client IP (anti-brute-force).
+			r.With(RateLimit(a.limiter, 5, time.Minute, a.log)).Post("/register", a.handleRegister)
+			r.With(RateLimit(a.limiter, 10, time.Minute, a.log)).Post("/login", a.handleLogin)
 			r.Post("/refresh", a.handleRefresh)
 			r.Post("/logout", a.handleLogout)
 		})

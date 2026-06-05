@@ -25,6 +25,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/platform/password"
 	"github.com/aashs25/hsbillnradius/internal/platform/postgres"
 	"github.com/aashs25/hsbillnradius/internal/platform/radiusclient"
+	"github.com/aashs25/hsbillnradius/internal/platform/ratelimit"
 	platformredis "github.com/aashs25/hsbillnradius/internal/platform/redis"
 	"github.com/aashs25/hsbillnradius/internal/platform/token"
 	"github.com/aashs25/hsbillnradius/internal/ports/payment"
@@ -118,7 +119,8 @@ func run() error {
 	paymentService := paymentsvc.New(repos, store, paymentGateways, coaService, notifyService, log)
 	voucherService := vouchersvc.New(repos, store, log)
 	ticketService := ticketsvc.New(repos, log)
-	api := httpapi.New(authService, planService, customerService, billingService, notifyService, paymentService, voucherService, ticketService, tokens, log)
+	limiter := ratelimit.NewRedis(rdb)
+	api := httpapi.New(authService, planService, customerService, billingService, notifyService, paymentService, voucherService, ticketService, limiter, tokens, log)
 
 	router := newRouter(cfg, log, pool, rdb, api)
 
@@ -137,6 +139,7 @@ func run() error {
 func newRouter(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool, rdb *goredis.Client, api *httpapi.API) chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
+	r.Use(httpserver.SecurityHeaders)
 	// Real client IP is resolved at the edge (LB) and will be parsed from a
 	// trusted X-Forwarded-For chain in a later milestone; chi's RealIP is
 	// deprecated because it trusts spoofable headers unconditionally.

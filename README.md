@@ -161,7 +161,8 @@ curl -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/j
 - [x] **M9 — Jaringan & operasional**: tiket (state machine + timeline), peta
   pelanggan GeoJSON, interface driver OLT multi-vendor (kontrak). Implementasi
   driver per-vendor & GenieACS bersifat scaffold (butuh perangkat nyata).
-- [ ] **M10 — Client area + hardening**
+- [x] **M10 — Hardening**: security headers, rate limiting login/register (Redis
+  token bucket, fail-open). Client-area portal pelanggan = sisa scope berikutnya.
 
 ## Konvensi engineering
 
