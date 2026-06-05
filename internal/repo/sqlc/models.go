@@ -291,6 +291,46 @@ type Plan struct {
 	DeletedAt    pgtype.Timestamptz `json:"deleted_at"`
 }
 
+type Radacct struct {
+	ID                 int64              `json:"id"`
+	TenantID           int64              `json:"tenant_id"`
+	Acctsessionid      string             `json:"acctsessionid"`
+	Acctuniqueid       string             `json:"acctuniqueid"`
+	Username           string             `json:"username"`
+	Nasipaddress       string             `json:"nasipaddress"`
+	Nasportid          string             `json:"nasportid"`
+	Acctstarttime      time.Time          `json:"acctstarttime"`
+	Acctupdatetime     pgtype.Timestamptz `json:"acctupdatetime"`
+	Acctstoptime       pgtype.Timestamptz `json:"acctstoptime"`
+	Acctsessiontime    int64              `json:"acctsessiontime"`
+	Acctinputoctets    int64              `json:"acctinputoctets"`
+	Acctoutputoctets   int64              `json:"acctoutputoctets"`
+	Calledstationid    string             `json:"calledstationid"`
+	Callingstationid   string             `json:"callingstationid"`
+	Framedipaddress    string             `json:"framedipaddress"`
+	Acctterminatecause string             `json:"acctterminatecause"`
+}
+
+type RadacctDefault struct {
+	ID                 int64              `json:"id"`
+	TenantID           int64              `json:"tenant_id"`
+	Acctsessionid      string             `json:"acctsessionid"`
+	Acctuniqueid       string             `json:"acctuniqueid"`
+	Username           string             `json:"username"`
+	Nasipaddress       string             `json:"nasipaddress"`
+	Nasportid          string             `json:"nasportid"`
+	Acctstarttime      time.Time          `json:"acctstarttime"`
+	Acctupdatetime     pgtype.Timestamptz `json:"acctupdatetime"`
+	Acctstoptime       pgtype.Timestamptz `json:"acctstoptime"`
+	Acctsessiontime    int64              `json:"acctsessiontime"`
+	Acctinputoctets    int64              `json:"acctinputoctets"`
+	Acctoutputoctets   int64              `json:"acctoutputoctets"`
+	Calledstationid    string             `json:"calledstationid"`
+	Callingstationid   string             `json:"callingstationid"`
+	Framedipaddress    string             `json:"framedipaddress"`
+	Acctterminatecause string             `json:"acctterminatecause"`
+}
+
 type Radcheck struct {
 	ID        int64  `json:"id"`
 	TenantID  int64  `json:"tenant_id"`

@@ -107,6 +107,14 @@ type RadiusAuthRepository interface {
 	InsertPostAuth(ctx context.Context, pa radius.PostAuth) error
 }
 
+// AccountingRepository writes radacct and reads active sessions.
+type AccountingRepository interface {
+	Start(ctx context.Context, e radius.AcctEvent) error
+	Interim(ctx context.Context, e radius.AcctEvent) error
+	Stop(ctx context.Context, e radius.AcctEvent) error
+	ActiveSessions(ctx context.Context, tenantID int64, username string) ([]radius.ActiveSession, error)
+}
+
 // RadiusMapRepository writes the FreeRADIUS provisioning tables (radcheck,
 // radusergroup, radgroupreply) when customers and plans change.
 type RadiusMapRepository interface {
@@ -131,6 +139,7 @@ type Repositories struct {
 	Customer     CustomerRepository
 	RadiusMap    RadiusMapRepository
 	RadiusAuth   RadiusAuthRepository
+	Accounting   AccountingRepository
 }
 
 // TxManager runs fn inside a database transaction, providing repositories bound

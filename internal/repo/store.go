@@ -51,6 +51,7 @@ func buildRepos(q *sqlc.Queries) port.Repositories {
 		Customer:     &customerRepo{q: q},
 		RadiusMap:    &radiusMapRepo{q: q},
 		RadiusAuth:   &radiusAuthRepo{q: q},
+		Accounting:   &accountingRepo{q: q},
 	}
 }
 

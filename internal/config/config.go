@@ -90,6 +90,7 @@ type RadiusConfig struct {
 	RequestTimeout time.Duration `env:"RADIUS_REQUEST_TIMEOUT" envDefault:"3s"`
 	NasCacheTTL    time.Duration `env:"RADIUS_NAS_CACHE_TTL" envDefault:"60s"`
 	UserCacheTTL   time.Duration `env:"RADIUS_USER_CACHE_TTL" envDefault:"45s"`
+	AcctBuffer     int           `env:"RADIUS_ACCT_BUFFER" envDefault:"4096"`
 }
 
 // Load reads configuration from the environment, applying a best-effort .env

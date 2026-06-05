@@ -640,3 +640,57 @@ func (r *radiusAuthRepo) InsertPostAuth(_ context.Context, pa radius.PostAuth) e
 	r.s.postauth = append(r.s.postauth, pa)
 	return nil
 }
+
+// --- accounting -------------------------------------------------------------
+
+type accountingRepo struct{ s *Store }
+
+func (r *accountingRepo) Start(_ context.Context, e radius.AcctEvent) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	if _, exists := r.s.sessions[e.UniqueID]; !exists {
+		r.s.sessions[e.UniqueID] = e
+	}
+	return nil
+}
+
+func (r *accountingRepo) Interim(_ context.Context, e radius.AcctEvent) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	if cur, ok := r.s.sessions[e.UniqueID]; ok && cur.TerminateCause == "" {
+		cur.SessionTime, cur.InputOctets, cur.OutputOctets = e.SessionTime, e.InputOctets, e.OutputOctets
+		if e.FramedIP != "" {
+			cur.FramedIP = e.FramedIP
+		}
+		r.s.sessions[e.UniqueID] = cur
+	}
+	return nil
+}
+
+func (r *accountingRepo) Stop(_ context.Context, e radius.AcctEvent) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	if cur, ok := r.s.sessions[e.UniqueID]; ok {
+		cur.SessionTime, cur.InputOctets, cur.OutputOctets = e.SessionTime, e.InputOctets, e.OutputOctets
+		cur.TerminateCause = e.TerminateCause
+		if cur.TerminateCause == "" {
+			cur.TerminateCause = "Stop"
+		}
+		r.s.sessions[e.UniqueID] = cur
+	}
+	return nil
+}
+
+func (r *accountingRepo) ActiveSessions(_ context.Context, tenantID int64, username string) ([]radius.ActiveSession, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []radius.ActiveSession
+	for _, e := range r.s.sessions {
+		if e.TenantID == tenantID && e.Username == username && e.TerminateCause == "" {
+			out = append(out, radius.ActiveSession{
+				SessionID: e.SessionID, NASIP: e.NASIP, FramedIP: e.FramedIP, CallingStation: e.CallingStation,
+			})
+		}
+	}
+	return out, nil
+}

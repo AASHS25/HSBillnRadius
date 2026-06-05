@@ -42,12 +42,14 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, arg GetUserByEmailParams) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GrantAllPermissionsToRole(ctx context.Context, roleID int64) error
+	InsertAcctStart(ctx context.Context, arg InsertAcctStartParams) error
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
 	InsertRadCheck(ctx context.Context, arg InsertRadCheckParams) error
 	InsertRadGroupReply(ctx context.Context, arg InsertRadGroupReplyParams) error
 	InsertRadPostAuth(ctx context.Context, arg InsertRadPostAuthParams) error
 	InsertRadReply(ctx context.Context, arg InsertRadReplyParams) error
 	InsertRadUserGroup(ctx context.Context, arg InsertRadUserGroupParams) error
+	ListActiveSessions(ctx context.Context, arg ListActiveSessionsParams) ([]ListActiveSessionsRow, error)
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListCustomersByTenant(ctx context.Context, arg ListCustomersByTenantParams) ([]Customer, error)
 	ListNasByTenant(ctx context.Context, tenantID int64) ([]Na, error)
@@ -67,6 +69,8 @@ type Querier interface {
 	SoftDeleteCustomer(ctx context.Context, arg SoftDeleteCustomerParams) error
 	SoftDeletePlan(ctx context.Context, arg SoftDeletePlanParams) error
 	SoftDeleteUser(ctx context.Context, arg SoftDeleteUserParams) error
+	UpdateAcctInterim(ctx context.Context, arg UpdateAcctInterimParams) error
+	UpdateAcctStop(ctx context.Context, arg UpdateAcctStopParams) error
 	UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) (Customer, error)
 	UpdateCustomerStatus(ctx context.Context, arg UpdateCustomerStatusParams) error
 	UpdatePlan(ctx context.Context, arg UpdatePlanParams) (Plan, error)

@@ -35,6 +35,7 @@ type Store struct {
 	radreply  map[string][]radius.Attr
 	nas       map[string]radius.Nas // keyed by IP
 	postauth  []radius.PostAuth
+	sessions  map[string]radius.AcctEvent // keyed by uniqueid
 	allPerms  []string
 	seq       map[string]int64
 }
@@ -54,6 +55,7 @@ func New() *Store {
 		radgroup:  map[string]radius.UserGroup{},
 		radreply:  map[string][]radius.Attr{},
 		nas:       map[string]radius.Nas{},
+		sessions:  map[string]radius.AcctEvent{},
 		allPerms: []string{
 			"tenant.read", "tenant.update", "user.read", "user.create",
 			"role.manage", "plan.manage", "customer.create", "customer.read",
@@ -84,6 +86,7 @@ func (s *Store) Repositories() repo.Repositories {
 		Customer:     &customerRepo{s},
 		RadiusMap:    &radiusRepo{s},
 		RadiusAuth:   &radiusAuthRepo{s},
+		Accounting:   &accountingRepo{s},
 	}
 }
 

@@ -136,5 +136,11 @@ func userKey(tenantID int64, username string) string {
 	return fmt.Sprintf("rad:user:%d:%s", tenantID, username)
 }
 
+// UserCacheKey is the cache key for a user's lookup; exported so other services
+// (e.g. isolate/restore) can invalidate it on status changes.
+func UserCacheKey(tenantID int64, username string) string {
+	return userKey(tenantID, username)
+}
+
 // IsNasUnknown reports whether err means the source NAS is not registered.
 func IsNasUnknown(err error) bool { return errors.Is(err, radius.ErrNasNotFound) }

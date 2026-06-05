@@ -3,7 +3,12 @@
 // radius transport/service; this package stays dependency-free.
 package radius
 
-import "errors"
+import (
+	"crypto/sha1" //nolint:gosec // used only to derive a stable session id
+	"encoding/hex"
+	"errors"
+	"time"
+)
 
 // Domain errors.
 var (
@@ -44,6 +49,49 @@ type PostAuth struct {
 	Pass     string // "" — never store cleartext passwords here
 	Reply    string // "Access-Accept" | "Access-Reject"
 	NASIP    string
+}
+
+// AcctStatus is the Acct-Status-Type of an accounting request.
+type AcctStatus string
+
+const (
+	AcctStart   AcctStatus = "Start"
+	AcctInterim AcctStatus = "Interim-Update"
+	AcctStop    AcctStatus = "Stop"
+)
+
+// AcctEvent is a parsed accounting request handed to the batch writer.
+type AcctEvent struct {
+	TenantID       int64
+	Status         AcctStatus
+	SessionID      string
+	UniqueID       string
+	Username       string
+	NASIP          string
+	NASPort        string
+	StartTime      time.Time
+	SessionTime    int64
+	InputOctets    int64
+	OutputOctets   int64
+	FramedIP       string
+	CallingStation string
+	CalledStation  string
+	TerminateCause string
+}
+
+// ActiveSession is an open accounting session (no stop time yet).
+type ActiveSession struct {
+	SessionID      string
+	NASIP          string
+	FramedIP       string
+	CallingStation string
+}
+
+// ComputeUniqueID derives the FreeRADIUS-style acctuniqueid from the session
+// identity so Start/Interim/Stop for the same session collapse to one row.
+func ComputeUniqueID(sessionID, nasIP, username string) string {
+	sum := sha1.Sum([]byte(sessionID + "," + nasIP + "," + username)) //nolint:gosec // stable id, not security
+	return hex.EncodeToString(sum[:])
 }
 
 // Common attribute names used when provisioning Mikrotik NAS replies.

@@ -10,6 +10,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/aashs25/hsbillnradius/internal/config"
 	"github.com/aashs25/hsbillnradius/internal/platform/cache"
 	"github.com/aashs25/hsbillnradius/internal/platform/logger"
@@ -73,9 +75,20 @@ func run() error {
 	log.Info("connected to redis")
 
 	store := repo.NewStore(pool)
-	svc := radiussvc.New(store.Repositories(), cache.NewRedis(rdb), cfg.Radius.NasCacheTTL, cfg.Radius.UserCacheTTL, log)
-	handler := radiusapi.NewAuthHandler(svc, log)
+	repos := store.Repositories()
+	svc := radiussvc.New(repos, cache.NewRedis(rdb), cfg.Radius.NasCacheTTL, cfg.Radius.UserCacheTTL, log)
+	acctWriter := radiussvc.NewAcctWriter(repos, cfg.Radius.AcctBuffer, log)
 
-	server := radiusserver.New(cfg.Radius.AuthAddr, cfg.Radius.Workers, cfg.Radius.RequestTimeout, handler.Handle, log)
-	return server.Run(ctx)
+	authHandler := radiusapi.NewAuthHandler(svc, log)
+	acctHandler := radiusapi.NewAcctHandler(svc, acctWriter, log)
+
+	authServer := radiusserver.New(cfg.Radius.AuthAddr, cfg.Radius.Workers, cfg.Radius.RequestTimeout, authHandler.Handle, log)
+	acctServer := radiusserver.New(cfg.Radius.AcctAddr, cfg.Radius.Workers, cfg.Radius.RequestTimeout, acctHandler.Handle, log)
+
+	// Run both listeners and the accounting writer; a failure in any cancels all.
+	g, gctx := errgroup.WithContext(ctx)
+	g.Go(func() error { return authServer.Run(gctx) })
+	g.Go(func() error { return acctServer.Run(gctx) })
+	g.Go(func() error { return acctWriter.Run(gctx) })
+	return g.Wait()
 }

@@ -138,7 +138,9 @@ curl -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/j
 - [x] **M3 — RADIUS (Auth)**: UDP server + bounded worker pool, NAS resolution
   (cached), PAP/CHAP auth vs radcheck, Mikrotik VSA reply (rate-limit, pool),
   radpostauth, Redis cache. Verified dengan klien RADIUS nyata.
-- [ ] **M4 — Accounting + CoA**
+- [x] **M4 — Accounting + CoA**: radacct (partisi bulanan), async batch writer,
+  Start/Interim/Stop, Accounting-Response, CoA/Disconnect client, Isolate/Restore
+  (ganti grup + kick sesi). Verified Start/Interim/Stop end-to-end.
 - [ ] **M5 — Billing** · **M6 — Notifikasi WA** · **M7 — Payment Gateway**
 - [ ] **M8 — Voucher & Hotspot** · **M9 — Jaringan (OLT/ACS)** · **M10 — Client area + hardening**
 
