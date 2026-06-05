@@ -159,8 +159,12 @@ curl -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/j
   fallback. Verified end-to-end (callback ber-signature → invoice lunas).
 - [x] **M8 — Voucher & Hotspot**: batch generate + provisioning RADIUS hotspot.
 - [x] **M9 — Jaringan & operasional**: tiket (state machine + timeline), peta
-  pelanggan GeoJSON, interface driver OLT multi-vendor (kontrak). Implementasi
-  driver per-vendor & GenieACS bersifat scaffold (butuh perangkat nyata).
+  pelanggan GeoJSON, **GenieACS (TR-069)** — baca/ubah Wi-Fi, reboot, refresh
+  (verified vs mock NBI). Interface driver OLT multi-vendor (kontrak; impl
+  per-vendor di-skip atas permintaan).
+- [x] **Client area**: portal pelanggan (login terpisah, lihat invoice/tiket,
+  buat tiket). **Reseller**: deposit/topup saldo + komisi otomatis saat
+  pelanggan reseller bayar.
 - [x] **M10 — Hardening**: security headers, rate limiting login/register (Redis
   token bucket, fail-open). Client-area portal pelanggan = sisa scope berikutnya.
 

@@ -810,6 +810,16 @@ type Broadcast struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+type Commission struct {
+	ID              int64       `json:"id"`
+	TenantID        int64       `json:"tenant_id"`
+	ResellerID      int64       `json:"reseller_id"`
+	SourcePaymentID pgtype.Int8 `json:"source_payment_id"`
+	AmountIdr       int64       `json:"amount_idr"`
+	Status          string      `json:"status"`
+	CreatedAt       time.Time   `json:"created_at"`
+}
+
 type Customer struct {
 	ID                 int64              `json:"id"`
 	TenantID           int64              `json:"tenant_id"`
@@ -842,6 +852,17 @@ type CustomerDocument struct {
 	Type       string    `json:"type"`
 	FilePath   string    `json:"file_path"`
 	CreatedAt  time.Time `json:"created_at"`
+}
+
+type Deposit struct {
+	ID         int64         `json:"id"`
+	TenantID   int64         `json:"tenant_id"`
+	UserID     int64         `json:"user_id"`
+	AmountIdr  int64         `json:"amount_idr"`
+	Method     PaymentMethod `json:"method"`
+	GatewayRef pgtype.Text   `json:"gateway_ref"`
+	Status     PaymentStatus `json:"status"`
+	CreatedAt  time.Time     `json:"created_at"`
 }
 
 type Invoice struct {

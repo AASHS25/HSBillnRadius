@@ -15,6 +15,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/notification"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/radius"
+	"github.com/aashs25/hsbillnradius/internal/domain/reseller"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 	"github.com/aashs25/hsbillnradius/internal/domain/ticket"
 	"github.com/aashs25/hsbillnradius/internal/domain/voucher"
@@ -191,6 +192,16 @@ type Repositories struct {
 	Voucher      VoucherRepository
 	Ticket       TicketRepository
 	AcsDevice    AcsDeviceRepository
+	Reseller     ResellerRepository
+}
+
+// ResellerRepository persists deposits, commissions and balance changes.
+type ResellerRepository interface {
+	CreateDeposit(ctx context.Context, d reseller.Deposit) (reseller.Deposit, error)
+	AddBalance(ctx context.Context, userID, delta int64) (int64, error)
+	CreateCommission(ctx context.Context, c reseller.Commission) (reseller.Commission, error)
+	ListDeposits(ctx context.Context, tenantID, userID int64, limit, offset int32) ([]reseller.Deposit, error)
+	ListCommissions(ctx context.Context, tenantID, resellerID int64, limit, offset int32) ([]reseller.Commission, error)
 }
 
 // AcsDeviceRepository persists the tenant<->CPE device mapping.

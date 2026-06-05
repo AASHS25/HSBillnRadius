@@ -36,14 +36,21 @@ type Notifier interface {
 	Enqueue(ctx context.Context, job notification.Job) error
 }
 
+// Commissioner records a reseller commission (optional integration).
+type Commissioner interface {
+	Record(ctx context.Context, tenantID, resellerID, sourcePaymentID, amountIDR int64) error
+}
+
 // Service provides billing operations.
 type Service struct {
-	repos    repo.Repositories
-	tx       repo.TxManager
-	restorer Restorer
-	notifier Notifier
-	log      *slog.Logger
-	now      func() time.Time
+	repos         repo.Repositories
+	tx            repo.TxManager
+	restorer      Restorer
+	notifier      Notifier
+	commissioner  Commissioner
+	commissionBps int32
+	log           *slog.Logger
+	now           func() time.Time
 }
 
 // New builds a billing Service. restorer may be nil (RADIUS restore skipped).
@@ -54,6 +61,13 @@ func New(repos repo.Repositories, tx repo.TxManager, restorer Restorer, log *slo
 // WithNotifier attaches a notifier so payments enqueue a "paid" message.
 func (s *Service) WithNotifier(n Notifier) *Service {
 	s.notifier = n
+	return s
+}
+
+// WithCommission attaches reseller commissioning at the given rate (basis points).
+func (s *Service) WithCommission(rateBps int32, c Commissioner) *Service {
+	s.commissionBps = rateBps
+	s.commissioner = c
 	return s
 }
 
@@ -215,6 +229,13 @@ func (s *Service) PayInvoice(ctx context.Context, tenantID, invoiceID, actorID i
 			DedupKey: fmt.Sprintf("paid-inv-%d", invoiceID),
 		}); err != nil {
 			s.log.WarnContext(ctx, "enqueue paid notification failed", slog.Any("error", err))
+		}
+	}
+	// Record reseller commission when the customer belongs to a reseller.
+	if s.commissioner != nil && s.commissionBps > 0 && cust.ResellerID != nil {
+		amount := payment.AmountIDR * int64(s.commissionBps) / 10000
+		if err := s.commissioner.Record(ctx, tenantID, *cust.ResellerID, payment.ID, amount); err != nil {
+			s.log.WarnContext(ctx, "record commission failed", slog.Any("error", err))
 		}
 	}
 	return payment, nil

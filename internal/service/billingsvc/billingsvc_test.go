@@ -20,10 +20,11 @@ import (
 
 const tenantID = int64(1)
 
-// fakeRestorer implements both Restorer and Isolator for billing tests.
+// fakeRestorer implements Restorer, Isolator and Commissioner for billing tests.
 type fakeRestorer struct {
 	calls        []string
 	isolateCalls []string
+	commissions  []int64
 }
 
 func (f *fakeRestorer) Restore(_ context.Context, _ int64, username, planGroup string) error {
@@ -33,6 +34,11 @@ func (f *fakeRestorer) Restore(_ context.Context, _ int64, username, planGroup s
 
 func (f *fakeRestorer) Isolate(_ context.Context, _ int64, username, isolirGroup string) error {
 	f.isolateCalls = append(f.isolateCalls, username+"|"+isolirGroup)
+	return nil
+}
+
+func (f *fakeRestorer) Record(_ context.Context, _, _, _, amountIDR int64) error {
+	f.commissions = append(f.commissions, amountIDR)
 	return nil
 }
 
@@ -119,6 +125,34 @@ func TestPayInvoice_AlreadyPaid(t *testing.T) {
 
 	_, err = svc.PayInvoice(ctx, tenantID, inv.ID, 1, billing.MethodCash)
 	assert.ErrorIs(t, err, billing.ErrAlreadyPaid)
+}
+
+func TestPayInvoice_RecordsResellerCommission(t *testing.T) {
+	store := memrepo.New()
+	r := store.Repositories()
+	ctx := context.Background()
+	resellerID := int64(99)
+	p, err := r.Plan.Create(ctx, plan.Plan{TenantID: tenantID, Name: "P", ServiceType: plan.ServicePPPoE, PriceIDR: 100000, ActiveDays: 30})
+	require.NoError(t, err)
+	c, err := r.Customer.Create(ctx, customer.Customer{
+		TenantID: tenantID, CustomerNo: "C9", Name: "Ratna", Status: customer.StatusActive,
+		PlanID: &p.ID, ResellerID: &resellerID,
+	})
+	require.NoError(t, err)
+
+	fake := &fakeRestorer{}
+	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	// 5% commission.
+	svc := billingsvc.New(r, store, fake, log).WithCommission(500, fake)
+
+	inv, err := svc.GenerateMonthly(ctx, tenantID, c.ID, 1, june())
+	require.NoError(t, err)
+	_, err = svc.PayInvoice(ctx, tenantID, inv.ID, 1, billing.MethodCash)
+	require.NoError(t, err)
+
+	// 5% of the invoice total is recorded as commission.
+	require.Len(t, fake.commissions, 1)
+	assert.Equal(t, inv.TotalIDR*500/10000, fake.commissions[0])
 }
 
 func TestRunIsolirScan_IsolatesExpired(t *testing.T) {

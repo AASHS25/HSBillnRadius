@@ -25,6 +25,12 @@ type Config struct {
 	Auth     AuthConfig
 	Worker   WorkerConfig
 	ACS      ACSConfig
+	Billing  BillingConfig
+}
+
+// BillingConfig holds billing-wide settings.
+type BillingConfig struct {
+	CommissionRateBps int32 `env:"COMMISSION_RATE_BPS" envDefault:"500"`
 }
 
 // ACSConfig configures the GenieACS NBI client. An empty BaseURL disables ACS.

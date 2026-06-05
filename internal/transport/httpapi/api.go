@@ -24,6 +24,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/service/notifysvc"
 	"github.com/aashs25/hsbillnradius/internal/service/paymentsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
+	"github.com/aashs25/hsbillnradius/internal/service/resellersvc"
 	"github.com/aashs25/hsbillnradius/internal/service/ticketsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/vouchersvc"
 )
@@ -39,6 +40,7 @@ type API struct {
 	vouchers  *vouchersvc.Service
 	tickets   *ticketsvc.Service
 	acs       *acssvc.Service
+	reseller  *resellersvc.Service
 	limiter   ratelimit.Limiter
 	tokens    *token.Manager
 	valid     *validator.Validate
@@ -46,7 +48,7 @@ type API struct {
 }
 
 // New builds the API delivery layer.
-func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, vouchers *vouchersvc.Service, tickets *ticketsvc.Service, acs *acssvc.Service, limiter ratelimit.Limiter, tokens *token.Manager, log *slog.Logger) *API {
+func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, vouchers *vouchersvc.Service, tickets *ticketsvc.Service, acs *acssvc.Service, reseller *resellersvc.Service, limiter ratelimit.Limiter, tokens *token.Manager, log *slog.Logger) *API {
 	return &API{
 		auth:      auth,
 		plans:     plans,
@@ -57,6 +59,7 @@ func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.S
 		vouchers:  vouchers,
 		tickets:   tickets,
 		acs:       acs,
+		reseller:  reseller,
 		limiter:   limiter,
 		tokens:    tokens,
 		valid:     validator.New(validator.WithRequiredStructEnabled()),
@@ -139,6 +142,13 @@ func (a *API) Mount(r chi.Router) {
 				r.Post("/{id}/transition", a.handleTransitionTicket)
 			})
 			r.With(RequirePermission("customer.read", a.log)).Get("/maps/customers.geojson", a.handleMapsGeoJSON)
+
+			r.Route("/reseller", func(r chi.Router) {
+				r.Use(RequirePermission("payment.manage", a.log))
+				r.Post("/deposits", a.handleTopup)
+				r.Get("/deposits", a.handleListDeposits)
+				r.Get("/commissions", a.handleListCommissions)
+			})
 
 			r.Route("/acs/devices", func(r chi.Router) {
 				r.Use(RequirePermission("customer.update", a.log))

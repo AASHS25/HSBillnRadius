@@ -12,6 +12,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/notification"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/radius"
+	"github.com/aashs25/hsbillnradius/internal/domain/reseller"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 	"github.com/aashs25/hsbillnradius/internal/domain/ticket"
 	"github.com/aashs25/hsbillnradius/internal/domain/voucher"
@@ -1325,6 +1326,67 @@ func (r *billingRepo) ListInvoicesByCustomer(_ context.Context, tenantID, custom
 	for _, inv := range r.s.invoices {
 		if inv.TenantID == tenantID && inv.CustomerID == customerID {
 			out = append(out, inv)
+		}
+	}
+	return page(out, limit, offset), nil
+}
+
+// --- reseller ---------------------------------------------------------------
+
+type resellerRepo struct{ s *Store }
+
+func (r *resellerRepo) CreateDeposit(_ context.Context, d reseller.Deposit) (reseller.Deposit, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	d.ID = r.s.next("deposit")
+	d.CreatedAt = time.Now()
+	if d.Status == "" {
+		d.Status = "settled"
+	}
+	r.s.deposits = append(r.s.deposits, d)
+	return d, nil
+}
+
+func (r *resellerRepo) AddBalance(_ context.Context, userID, delta int64) (int64, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	u := r.s.users[userID]
+	u.BalanceIDR += delta
+	r.s.users[userID] = u
+	return u.BalanceIDR, nil
+}
+
+func (r *resellerRepo) CreateCommission(_ context.Context, c reseller.Commission) (reseller.Commission, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	c.ID = r.s.next("commission")
+	c.CreatedAt = time.Now()
+	if c.Status == "" {
+		c.Status = "settled"
+	}
+	r.s.commissions = append(r.s.commissions, c)
+	return c, nil
+}
+
+func (r *resellerRepo) ListDeposits(_ context.Context, tenantID, userID int64, limit, offset int32) ([]reseller.Deposit, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []reseller.Deposit
+	for _, d := range r.s.deposits {
+		if d.TenantID == tenantID && d.UserID == userID {
+			out = append(out, d)
+		}
+	}
+	return page(out, limit, offset), nil
+}
+
+func (r *resellerRepo) ListCommissions(_ context.Context, tenantID, resellerID int64, limit, offset int32) ([]reseller.Commission, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []reseller.Commission
+	for _, c := range r.s.commissions {
+		if c.TenantID == tenantID && c.ResellerID == resellerID {
+			out = append(out, c)
 		}
 	}
 	return page(out, limit, offset), nil

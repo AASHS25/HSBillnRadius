@@ -12,6 +12,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/customer"
 	"github.com/aashs25/hsbillnradius/internal/domain/iam"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
+	"github.com/aashs25/hsbillnradius/internal/domain/reseller"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 	"github.com/aashs25/hsbillnradius/internal/domain/ticket"
 	"github.com/aashs25/hsbillnradius/internal/platform/token"
@@ -97,7 +98,8 @@ func classify(err error) (int, string) {
 	case errors.Is(err, iam.ErrWeakPassword), errors.Is(err, iam.ErrInvalidEmail),
 		errors.Is(err, tenant.ErrInvalidSlug), errors.Is(err, plan.ErrInvalidPlan),
 		errors.Is(err, plan.ErrInvalidPrice), errors.Is(err, customer.ErrInvalidCust),
-		errors.Is(err, customer.ErrPlanRequired), errors.Is(err, customer.ErrCredsRequired):
+		errors.Is(err, customer.ErrPlanRequired), errors.Is(err, customer.ErrCredsRequired),
+		errors.Is(err, reseller.ErrInvalidAmount):
 		return http.StatusUnprocessableEntity, "invalid_input"
 	case errors.Is(err, acssvc.ErrNotConfigured):
 		return http.StatusServiceUnavailable, "acs_unavailable"

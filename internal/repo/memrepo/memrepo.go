@@ -16,6 +16,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/notification"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
 	"github.com/aashs25/hsbillnradius/internal/domain/radius"
+	"github.com/aashs25/hsbillnradius/internal/domain/reseller"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 	"github.com/aashs25/hsbillnradius/internal/domain/ticket"
 	"github.com/aashs25/hsbillnradius/internal/domain/voucher"
@@ -56,6 +57,8 @@ type Store struct {
 	tickets        map[int64]ticket.Ticket
 	ticketEvents   []ticket.Event
 	acsDevices     map[string]acs.StoredDevice
+	deposits       []reseller.Deposit
+	commissions    []reseller.Commission
 	allPerms       []string
 	seq            map[string]int64
 }
@@ -124,6 +127,7 @@ func (s *Store) Repositories() repo.Repositories {
 		Voucher:      &voucherRepo{s},
 		Ticket:       &ticketRepo{s},
 		AcsDevice:    &acsRepo{s},
+		Reseller:     &resellerRepo{s},
 	}
 }
 

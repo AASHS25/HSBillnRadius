@@ -13,6 +13,7 @@ import (
 type Querier interface {
 	AddRolePermission(ctx context.Context, arg AddRolePermissionParams) error
 	AddTicketEvent(ctx context.Context, arg AddTicketEventParams) (TicketEvent, error)
+	AddUserBalance(ctx context.Context, arg AddUserBalanceParams) (int64, error)
 	AssignTicket(ctx context.Context, arg AssignTicketParams) error
 	// Atomically lease up to $1 due rows (bump next_attempt_at to the lease and
 	// increment attempts) so concurrent workers don't double-process.
@@ -21,7 +22,9 @@ type Querier interface {
 	CountPlansByTenant(ctx context.Context, tenantID int64) (int64, error)
 	CountUsersByTenant(ctx context.Context, tenantID int64) (int64, error)
 	CountVouchersByStatus(ctx context.Context, arg CountVouchersByStatusParams) (int64, error)
+	CreateCommission(ctx context.Context, arg CreateCommissionParams) (Commission, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error)
+	CreateDeposit(ctx context.Context, arg CreateDepositParams) (Deposit, error)
 	// Idempotent per (customer, period): a conflict returns no row, which the repo
 	// maps to ErrInvoiceExists.
 	CreateInvoice(ctx context.Context, arg CreateInvoiceParams) (Invoice, error)
@@ -79,8 +82,10 @@ type Querier interface {
 	ListAcsDevices(ctx context.Context, arg ListAcsDevicesParams) ([]AcsDevice, error)
 	ListActiveSessions(ctx context.Context, arg ListActiveSessionsParams) ([]ListActiveSessionsRow, error)
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
+	ListCommissions(ctx context.Context, arg ListCommissionsParams) ([]Commission, error)
 	ListCustomersByTenant(ctx context.Context, arg ListCustomersByTenantParams) ([]Customer, error)
 	ListCustomersWithLocation(ctx context.Context, tenantID int64) ([]ListCustomersWithLocationRow, error)
+	ListDeposits(ctx context.Context, arg ListDepositsParams) ([]Deposit, error)
 	ListExpiredActiveCustomers(ctx context.Context, limit int32) ([]ListExpiredActiveCustomersRow, error)
 	ListInvoiceItems(ctx context.Context, invoiceID int64) ([]InvoiceItem, error)
 	ListInvoicesByCustomer(ctx context.Context, arg ListInvoicesByCustomerParams) ([]Invoice, error)
