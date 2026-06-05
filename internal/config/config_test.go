@@ -29,6 +29,7 @@ func TestLoad_OverridesFromEnv(t *testing.T) {
 	t.Setenv("HTTP_HOST", "127.0.0.1")
 	t.Setenv("POSTGRES_MAX_CONNS", "50")
 	t.Setenv("REDIS_ADDR", "redis:6380")
+	t.Setenv("JWT_SECRET", "a-sufficiently-long-production-jwt-secret-value")
 
 	cfg, err := Load()
 	require.NoError(t, err)
@@ -77,5 +78,10 @@ func validConfig() Config {
 			MinConns: 2,
 		},
 		Redis: RedisConfig{Addr: "localhost:6379"},
+		Auth: AuthConfig{
+			JWTSecret:       "dev-secret",
+			AccessTokenTTL:  15 * time.Minute,
+			RefreshTokenTTL: 720 * time.Hour,
+		},
 	}
 }

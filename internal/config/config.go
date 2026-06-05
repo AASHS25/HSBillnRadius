@@ -22,7 +22,19 @@ type Config struct {
 	Postgres PostgresConfig
 	Redis    RedisConfig
 	Radius   RadiusConfig
+	Auth     AuthConfig
 }
+
+// AuthConfig configures JWT issuance and refresh-token lifetimes.
+type AuthConfig struct {
+	JWTSecret       string        `env:"JWT_SECRET" envDefault:"dev-insecure-secret-change-me-please!"`
+	JWTIssuer       string        `env:"JWT_ISSUER" envDefault:"billing-radius"`
+	AccessTokenTTL  time.Duration `env:"ACCESS_TOKEN_TTL" envDefault:"15m"`
+	RefreshTokenTTL time.Duration `env:"REFRESH_TOKEN_TTL" envDefault:"720h"`
+}
+
+// defaultJWTSecret must never be used in production; Validate enforces this.
+const defaultJWTSecret = "dev-insecure-secret-change-me-please!"
 
 // AppConfig holds process-wide identity and logging settings.
 type AppConfig struct {
@@ -124,6 +136,20 @@ func (c Config) Validate() error {
 	}
 	if c.Redis.Addr == "" {
 		return fmt.Errorf("REDIS_ADDR is required")
+	}
+	if c.Auth.AccessTokenTTL <= 0 {
+		return fmt.Errorf("ACCESS_TOKEN_TTL must be positive")
+	}
+	if c.Auth.RefreshTokenTTL <= c.Auth.AccessTokenTTL {
+		return fmt.Errorf("REFRESH_TOKEN_TTL must be greater than ACCESS_TOKEN_TTL")
+	}
+	if c.IsProduction() {
+		if c.Auth.JWTSecret == defaultJWTSecret {
+			return fmt.Errorf("JWT_SECRET must be set in production")
+		}
+		if len(c.Auth.JWTSecret) < 32 {
+			return fmt.Errorf("JWT_SECRET must be at least 32 bytes in production")
+		}
 	}
 	return nil
 }

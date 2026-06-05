@@ -104,12 +104,32 @@ Semua via environment (12-factor), divalidasi saat boot. Lihat
 [`configs/.env.example`](configs/.env.example) untuk daftar lengkap variabel
 (`APP_*`, `HTTP_*`, `POSTGRES_*`, `REDIS_*`, `RADIUS_*`).
 
+## API (M1)
+
+Semua di bawah `/api/v1`. Auth pakai `Authorization: Bearer <access_token>`.
+
+| Method | Path | Auth | Keterangan |
+|---|---|---|---|
+| POST | `/auth/register` | - | Buat tenant baru + user owner, balas sesi |
+| POST | `/auth/login` | - | `{tenant_slug,email,password}` → sesi |
+| POST | `/auth/refresh` | - | Rotasi refresh token (deteksi reuse) |
+| POST | `/auth/logout` | - | Revoke refresh token |
+| GET | `/me` | Bearer | Profil user + tenant + permissions |
+| GET | `/users` | `user.read` | Daftar user (tenant-scoped, paginated) |
+| GET | `/audit-logs` | `tenant.read` | Audit log tenant |
+
+```bash
+curl -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/json' \
+  -d '{"tenant_name":"Acme ISP","tenant_slug":"acme","name":"Owner","email":"owner@acme.test","password":"password123"}'
+```
+
 ## Roadmap
 
 - [x] **M0 — Bootstrap**: struktur, config, logger, pgx pool, redis, Makefile,
   docker-compose, goose, golangci-lint, healthz/readyz, CI.
-- [ ] **M1 — Tenancy & Auth**: tenants/users/roles/permissions, JWT, RBAC,
-  multi-tenant context, audit log.
+- [x] **M1 — Tenancy & Auth**: tenants/users/roles/permissions/refresh_tokens,
+  register/login/refresh/logout, argon2id, JWT access+refresh (rotating +
+  reuse detection), RBAC middleware, multi-tenant context, audit log. sqlc.
 - [ ] **M2 — Customer & Plan**: CRUD pelanggan, paket, bandwidth profile,
   mapping ke radcheck/radusergroup/radgroupreply.
 - [ ] **M3 — RADIUS (Auth)** · **M4 — Accounting + CoA**

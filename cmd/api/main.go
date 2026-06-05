@@ -19,8 +19,13 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/config"
 	"github.com/aashs25/hsbillnradius/internal/platform/httpserver"
 	"github.com/aashs25/hsbillnradius/internal/platform/logger"
+	"github.com/aashs25/hsbillnradius/internal/platform/password"
 	"github.com/aashs25/hsbillnradius/internal/platform/postgres"
 	platformredis "github.com/aashs25/hsbillnradius/internal/platform/redis"
+	"github.com/aashs25/hsbillnradius/internal/platform/token"
+	"github.com/aashs25/hsbillnradius/internal/repo"
+	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
+	"github.com/aashs25/hsbillnradius/internal/transport/httpapi"
 )
 
 func main() {
@@ -75,7 +80,14 @@ func run() error {
 	defer func() { _ = rdb.Close() }()
 	log.Info("connected to redis")
 
-	router := newRouter(cfg, log, pool, rdb)
+	// Compose the auth stack: repositories, crypto, token manager, services.
+	store := repo.NewStore(pool)
+	hasher := password.NewHasher()
+	tokens := token.NewManager(cfg.Auth.JWTSecret, cfg.Auth.JWTIssuer, cfg.Auth.AccessTokenTTL)
+	authService := authsvc.New(store.Repositories(), store, hasher, tokens, cfg.Auth.RefreshTokenTTL, log)
+	api := httpapi.New(authService, tokens, log)
+
+	router := newRouter(cfg, log, pool, rdb, api)
 
 	srv := httpserver.New(httpserver.Config{
 		Addr:            cfg.HTTP.Addr(),
@@ -88,8 +100,8 @@ func run() error {
 	return srv.Run(ctx)
 }
 
-// newRouter assembles the chi router and base middleware stack.
-func newRouter(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool, rdb *goredis.Client) chi.Router {
+// newRouter assembles the chi router, base middleware stack and API routes.
+func newRouter(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool, rdb *goredis.Client, api *httpapi.API) chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	// Real client IP is resolved at the edge (LB) and will be parsed from a
@@ -103,6 +115,8 @@ func newRouter(cfg *config.Config, log *slog.Logger, pool *pgxpool.Pool, rdb *go
 	r.Get("/healthz", hc.Liveness)
 	r.Get("/readyz", hc.Readiness)
 	r.Handle("/metrics", promhttp.Handler())
+
+	api.Mount(r)
 
 	return r
 }
