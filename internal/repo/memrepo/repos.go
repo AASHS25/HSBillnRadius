@@ -15,6 +15,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 	"github.com/aashs25/hsbillnradius/internal/domain/ticket"
 	"github.com/aashs25/hsbillnradius/internal/domain/voucher"
+	"github.com/aashs25/hsbillnradius/internal/ports/acs"
 )
 
 // page applies limit/offset to a slice length, returning the sub-bounds.
@@ -1242,4 +1243,42 @@ func (r *ticketRepo) ListEvents(_ context.Context, ticketID int64) ([]ticket.Eve
 		}
 	}
 	return out, nil
+}
+
+// --- acs devices ------------------------------------------------------------
+
+type acsRepo struct{ s *Store }
+
+func akey(tenantID int64, deviceID string) string { return fmt.Sprintf("%d|%s", tenantID, deviceID) }
+
+func (r *acsRepo) Upsert(_ context.Context, d acs.StoredDevice) (acs.StoredDevice, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	if d.ID == 0 {
+		d.ID = r.s.next("acs")
+	}
+	r.s.acsDevices[akey(d.TenantID, d.DeviceID)] = d
+	return d, nil
+}
+
+func (r *acsRepo) List(_ context.Context, tenantID int64, limit, offset int32) ([]acs.StoredDevice, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []acs.StoredDevice
+	for _, d := range r.s.acsDevices {
+		if d.TenantID == tenantID {
+			out = append(out, d)
+		}
+	}
+	return page(out, limit, offset), nil
+}
+
+func (r *acsRepo) Get(_ context.Context, tenantID int64, deviceID string) (acs.StoredDevice, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	d, ok := r.s.acsDevices[akey(tenantID, deviceID)]
+	if !ok {
+		return acs.StoredDevice{}, fmt.Errorf("acs device not found")
+	}
+	return d, nil
 }

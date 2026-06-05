@@ -15,6 +15,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 	"github.com/aashs25/hsbillnradius/internal/domain/ticket"
 	"github.com/aashs25/hsbillnradius/internal/platform/token"
+	"github.com/aashs25/hsbillnradius/internal/service/acssvc"
 )
 
 // errorBody is the JSON envelope for error responses.
@@ -97,6 +98,8 @@ func classify(err error) (int, string) {
 		errors.Is(err, plan.ErrInvalidPrice), errors.Is(err, customer.ErrInvalidCust),
 		errors.Is(err, customer.ErrPlanRequired), errors.Is(err, customer.ErrCredsRequired):
 		return http.StatusUnprocessableEntity, "invalid_input"
+	case errors.Is(err, acssvc.ErrNotConfigured):
+		return http.StatusServiceUnavailable, "acs_unavailable"
 	default:
 		return http.StatusInternalServerError, "internal_error"
 	}

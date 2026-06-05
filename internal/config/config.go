@@ -24,6 +24,13 @@ type Config struct {
 	Radius   RadiusConfig
 	Auth     AuthConfig
 	Worker   WorkerConfig
+	ACS      ACSConfig
+}
+
+// ACSConfig configures the GenieACS NBI client. An empty BaseURL disables ACS.
+type ACSConfig struct {
+	BaseURL string        `env:"ACS_BASE_URL"`
+	Timeout time.Duration `env:"ACS_TIMEOUT" envDefault:"15s"`
 }
 
 // WorkerConfig configures the background worker's notification processing.

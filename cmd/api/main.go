@@ -28,9 +28,11 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/platform/ratelimit"
 	platformredis "github.com/aashs25/hsbillnradius/internal/platform/redis"
 	"github.com/aashs25/hsbillnradius/internal/platform/token"
+	"github.com/aashs25/hsbillnradius/internal/ports/acs"
 	"github.com/aashs25/hsbillnradius/internal/ports/payment"
 	"github.com/aashs25/hsbillnradius/internal/ports/wa"
 	"github.com/aashs25/hsbillnradius/internal/repo"
+	"github.com/aashs25/hsbillnradius/internal/service/acssvc"
 	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/billingsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/coasvc"
@@ -119,8 +121,13 @@ func run() error {
 	paymentService := paymentsvc.New(repos, store, paymentGateways, coaService, notifyService, log)
 	voucherService := vouchersvc.New(repos, store, log)
 	ticketService := ticketsvc.New(repos, log)
+	var acsClient acs.Client
+	if cfg.ACS.BaseURL != "" {
+		acsClient = acs.NewGenieACS(cfg.ACS.BaseURL, &http.Client{Timeout: cfg.ACS.Timeout})
+	}
+	acsService := acssvc.New(repos, acsClient, log)
 	limiter := ratelimit.NewRedis(rdb)
-	api := httpapi.New(authService, planService, customerService, billingService, notifyService, paymentService, voucherService, ticketService, limiter, tokens, log)
+	api := httpapi.New(authService, planService, customerService, billingService, notifyService, paymentService, voucherService, ticketService, acsService, limiter, tokens, log)
 
 	router := newRouter(cfg, log, pool, rdb, api)
 

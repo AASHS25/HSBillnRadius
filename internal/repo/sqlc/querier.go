@@ -43,6 +43,7 @@ type Querier interface {
 	DeleteRadUserGroupByUser(ctx context.Context, arg DeleteRadUserGroupByUserParams) error
 	EnqueueNotification(ctx context.Context, arg EnqueueNotificationParams) (int64, error)
 	FailNotification(ctx context.Context, arg FailNotificationParams) error
+	GetAcsDevice(ctx context.Context, arg GetAcsDeviceParams) (AcsDevice, error)
 	GetActiveGateway(ctx context.Context, tenantID int64) (WaGateway, error)
 	GetBandwidthProfileByPlan(ctx context.Context, planID int64) (BandwidthProfile, error)
 	GetCustomerByID(ctx context.Context, arg GetCustomerByIDParams) (Customer, error)
@@ -74,6 +75,7 @@ type Querier interface {
 	InsertRadPostAuth(ctx context.Context, arg InsertRadPostAuthParams) error
 	InsertRadReply(ctx context.Context, arg InsertRadReplyParams) error
 	InsertRadUserGroup(ctx context.Context, arg InsertRadUserGroupParams) error
+	ListAcsDevices(ctx context.Context, arg ListAcsDevicesParams) ([]AcsDevice, error)
 	ListActiveSessions(ctx context.Context, arg ListActiveSessionsParams) ([]ListActiveSessionsRow, error)
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListCustomersByTenant(ctx context.Context, arg ListCustomersByTenantParams) ([]Customer, error)
@@ -127,6 +129,7 @@ type Querier interface {
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserLastLogin(ctx context.Context, id int64) error
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
+	UpsertAcsDevice(ctx context.Context, arg UpsertAcsDeviceParams) (AcsDevice, error)
 	UpsertBandwidthProfile(ctx context.Context, arg UpsertBandwidthProfileParams) (BandwidthProfile, error)
 	UpsertGateway(ctx context.Context, arg UpsertGatewayParams) (WaGateway, error)
 	UpsertPaymentGateway(ctx context.Context, arg UpsertPaymentGatewayParams) (PaymentGateway, error)

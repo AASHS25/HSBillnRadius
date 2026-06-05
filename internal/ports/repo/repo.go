@@ -18,6 +18,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 	"github.com/aashs25/hsbillnradius/internal/domain/ticket"
 	"github.com/aashs25/hsbillnradius/internal/domain/voucher"
+	"github.com/aashs25/hsbillnradius/internal/ports/acs"
 )
 
 // TenantRepository persists tenants.
@@ -185,6 +186,14 @@ type Repositories struct {
 	Notification NotificationRepository
 	Voucher      VoucherRepository
 	Ticket       TicketRepository
+	AcsDevice    AcsDeviceRepository
+}
+
+// AcsDeviceRepository persists the tenant<->CPE device mapping.
+type AcsDeviceRepository interface {
+	Upsert(ctx context.Context, d acs.StoredDevice) (acs.StoredDevice, error)
+	List(ctx context.Context, tenantID int64, limit, offset int32) ([]acs.StoredDevice, error)
+	Get(ctx context.Context, tenantID int64, deviceID string) (acs.StoredDevice, error)
 }
 
 // VoucherRepository persists voucher batches and vouchers.

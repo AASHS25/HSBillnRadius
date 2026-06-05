@@ -755,6 +755,21 @@ func (ns NullWaProvider) Value() (driver.Value, error) {
 	return string(ns.WaProvider), nil
 }
 
+type AcsDevice struct {
+	ID           int64              `json:"id"`
+	TenantID     int64              `json:"tenant_id"`
+	CustomerID   pgtype.Int8        `json:"customer_id"`
+	DeviceID     string             `json:"device_id"`
+	SerialNumber string             `json:"serial_number"`
+	Manufacturer string             `json:"manufacturer"`
+	Model        string             `json:"model"`
+	WanIp        string             `json:"wan_ip"`
+	Ssid         string             `json:"ssid"`
+	LastInformAt pgtype.Timestamptz `json:"last_inform_at"`
+	CreatedAt    time.Time          `json:"created_at"`
+	UpdatedAt    time.Time          `json:"updated_at"`
+}
+
 type AuditLog struct {
 	ID          int64       `json:"id"`
 	TenantID    int64       `json:"tenant_id"`

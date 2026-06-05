@@ -19,6 +19,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 	"github.com/aashs25/hsbillnradius/internal/domain/ticket"
 	"github.com/aashs25/hsbillnradius/internal/domain/voucher"
+	"github.com/aashs25/hsbillnradius/internal/ports/acs"
 	repo "github.com/aashs25/hsbillnradius/internal/ports/repo"
 )
 
@@ -54,6 +55,7 @@ type Store struct {
 	vouchers       map[int64]voucher.Voucher
 	tickets        map[int64]ticket.Ticket
 	ticketEvents   []ticket.Event
+	acsDevices     map[string]acs.StoredDevice
 	allPerms       []string
 	seq            map[string]int64
 }
@@ -85,6 +87,7 @@ func New() *Store {
 		voucherBatches: map[int64]voucher.Batch{},
 		vouchers:       map[int64]voucher.Voucher{},
 		tickets:        map[int64]ticket.Ticket{},
+		acsDevices:     map[string]acs.StoredDevice{},
 		allPerms: []string{
 			"tenant.read", "tenant.update", "user.read", "user.create",
 			"role.manage", "plan.manage", "customer.create", "customer.read",
@@ -120,6 +123,7 @@ func (s *Store) Repositories() repo.Repositories {
 		Notification: &notificationRepo{s},
 		Voucher:      &voucherRepo{s},
 		Ticket:       &ticketRepo{s},
+		AcsDevice:    &acsRepo{s},
 	}
 }
 
