@@ -318,6 +318,16 @@ type Radgroupreply struct {
 	Value     string `json:"value"`
 }
 
+type Radpostauth struct {
+	ID           int64     `json:"id"`
+	TenantID     int64     `json:"tenant_id"`
+	Username     string    `json:"username"`
+	Pass         string    `json:"pass"`
+	Reply        string    `json:"reply"`
+	Authdate     time.Time `json:"authdate"`
+	Nasipaddress string    `json:"nasipaddress"`
+}
+
 type Radreply struct {
 	ID        int64  `json:"id"`
 	TenantID  int64  `json:"tenant_id"`

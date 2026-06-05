@@ -1,9 +1,6 @@
-// Command radius runs the RADIUS Auth + Accounting server and the CoA/Disconnect
-// sender. It is deliberately a separate process from the api-service so that an
-// api crash never interrupts customer authentication.
-//
-// M0 scaffolding only: it boots config + logging and blocks until a shutdown
-// signal. The UDP listeners and handlers are implemented in M3/M4.
+// Command radius runs the RADIUS Auth server and (from M4) Accounting + CoA. It
+// is a separate process from the api-service so an api crash never interrupts
+// customer authentication.
 package main
 
 import (
@@ -14,7 +11,14 @@ import (
 	"syscall"
 
 	"github.com/aashs25/hsbillnradius/internal/config"
+	"github.com/aashs25/hsbillnradius/internal/platform/cache"
 	"github.com/aashs25/hsbillnradius/internal/platform/logger"
+	"github.com/aashs25/hsbillnradius/internal/platform/postgres"
+	"github.com/aashs25/hsbillnradius/internal/platform/radiusserver"
+	platformredis "github.com/aashs25/hsbillnradius/internal/platform/redis"
+	"github.com/aashs25/hsbillnradius/internal/repo"
+	"github.com/aashs25/hsbillnradius/internal/service/radiussvc"
+	"github.com/aashs25/hsbillnradius/internal/transport/radiusapi"
 )
 
 func main() {
@@ -41,13 +45,37 @@ func run() error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	log.Info("radius-service starting (scaffold)",
-		slog.String("auth_addr", cfg.Radius.AuthAddr),
-		slog.String("acct_addr", cfg.Radius.AcctAddr),
-		slog.Int("coa_port", cfg.Radius.CoAPort),
-	)
+	pool, err := postgres.New(ctx, postgres.Config{
+		DSN:             cfg.Postgres.DSN,
+		MaxConns:        cfg.Postgres.MaxConns,
+		MinConns:        cfg.Postgres.MinConns,
+		MaxConnLifetime: cfg.Postgres.MaxConnLifetime,
+		MaxConnIdleTime: cfg.Postgres.MaxConnIdleTime,
+		ConnectTimeout:  cfg.Postgres.ConnectTimeout,
+	})
+	if err != nil {
+		return err
+	}
+	defer pool.Close()
+	log.Info("connected to postgres")
 
-	<-ctx.Done()
-	log.Info("radius-service shutting down")
-	return nil
+	rdb, err := platformredis.New(ctx, platformredis.Config{
+		Addr:        cfg.Redis.Addr,
+		Password:    cfg.Redis.Password,
+		DB:          cfg.Redis.DB,
+		PoolSize:    cfg.Redis.PoolSize,
+		DialTimeout: cfg.Redis.DialTimeout,
+	})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = rdb.Close() }()
+	log.Info("connected to redis")
+
+	store := repo.NewStore(pool)
+	svc := radiussvc.New(store.Repositories(), cache.NewRedis(rdb), cfg.Radius.NasCacheTTL, cfg.Radius.UserCacheTTL, log)
+	handler := radiusapi.NewAuthHandler(svc, log)
+
+	server := radiusserver.New(cfg.Radius.AuthAddr, cfg.Radius.Workers, cfg.Radius.RequestTimeout, handler.Handle, log)
+	return server.Run(ctx)
 }

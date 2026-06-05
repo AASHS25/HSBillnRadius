@@ -96,6 +96,17 @@ type CustomerRepository interface {
 	SoftDelete(ctx context.Context, tenantID, id int64) error
 }
 
+// RadiusAuthRepository is the read side used by the radius-service during
+// authentication, plus the radpostauth audit write and NAS management.
+type RadiusAuthRepository interface {
+	NasByIP(ctx context.Context, ip string) (radius.Nas, error)
+	CreateNas(ctx context.Context, n radius.Nas) (radius.Nas, error)
+	UserCheck(ctx context.Context, tenantID int64, username string) ([]radius.Attr, error)
+	UserReply(ctx context.Context, tenantID int64, username string) ([]radius.Attr, error)
+	GroupReply(ctx context.Context, tenantID int64, groupname string) ([]radius.Attr, error)
+	InsertPostAuth(ctx context.Context, pa radius.PostAuth) error
+}
+
 // RadiusMapRepository writes the FreeRADIUS provisioning tables (radcheck,
 // radusergroup, radgroupreply) when customers and plans change.
 type RadiusMapRepository interface {
@@ -119,6 +130,7 @@ type Repositories struct {
 	Bandwidth    BandwidthProfileRepository
 	Customer     CustomerRepository
 	RadiusMap    RadiusMapRepository
+	RadiusAuth   RadiusAuthRepository
 }
 
 // TxManager runs fn inside a database transaction, providing repositories bound

@@ -33,6 +33,8 @@ type Store struct {
 	radcheck  map[string][]radius.Attr
 	radgroup  map[string]radius.UserGroup
 	radreply  map[string][]radius.Attr
+	nas       map[string]radius.Nas // keyed by IP
+	postauth  []radius.PostAuth
 	allPerms  []string
 	seq       map[string]int64
 }
@@ -51,6 +53,7 @@ func New() *Store {
 		radcheck:  map[string][]radius.Attr{},
 		radgroup:  map[string]radius.UserGroup{},
 		radreply:  map[string][]radius.Attr{},
+		nas:       map[string]radius.Nas{},
 		allPerms: []string{
 			"tenant.read", "tenant.update", "user.read", "user.create",
 			"role.manage", "plan.manage", "customer.create", "customer.read",
@@ -80,7 +83,24 @@ func (s *Store) Repositories() repo.Repositories {
 		Bandwidth:    &bandwidthRepo{s},
 		Customer:     &customerRepo{s},
 		RadiusMap:    &radiusRepo{s},
+		RadiusAuth:   &radiusAuthRepo{s},
 	}
+}
+
+// SeedNas registers a NAS for auth tests and returns it with an id.
+func (s *Store) SeedNas(n radius.Nas) radius.Nas {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	n.ID = s.next("nas")
+	s.nas[n.Name] = n
+	return n
+}
+
+// PostAuthCount returns how many radpostauth records were written.
+func (s *Store) PostAuthCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.postauth)
 }
 
 // WithTx runs fn against the same store (no real isolation/rollback).

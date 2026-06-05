@@ -592,3 +592,51 @@ func (r *radiusRepo) UserGroups(_ context.Context, tenantID int64, username stri
 	}
 	return []radius.UserGroup{}, nil
 }
+
+// --- radius auth (read side) ------------------------------------------------
+
+type radiusAuthRepo struct{ s *Store }
+
+func (r *radiusAuthRepo) NasByIP(_ context.Context, ip string) (radius.Nas, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	n, ok := r.s.nas[ip]
+	if !ok {
+		return radius.Nas{}, radius.ErrNasNotFound
+	}
+	return n, nil
+}
+
+func (r *radiusAuthRepo) CreateNas(_ context.Context, n radius.Nas) (radius.Nas, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	if _, ok := r.s.nas[n.Name]; ok {
+		return radius.Nas{}, radius.ErrNasExists
+	}
+	n.ID = r.s.next("nas")
+	r.s.nas[n.Name] = n
+	return n, nil
+}
+
+func (r *radiusAuthRepo) UserCheck(_ context.Context, tenantID int64, username string) ([]radius.Attr, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	return append([]radius.Attr(nil), r.s.radcheck[key(tenantID, username)]...), nil
+}
+
+func (r *radiusAuthRepo) UserReply(_ context.Context, _ int64, _ string) ([]radius.Attr, error) {
+	return nil, nil
+}
+
+func (r *radiusAuthRepo) GroupReply(_ context.Context, tenantID int64, groupname string) ([]radius.Attr, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	return append([]radius.Attr(nil), r.s.radreply[key(tenantID, groupname)]...), nil
+}
+
+func (r *radiusAuthRepo) InsertPostAuth(_ context.Context, pa radius.PostAuth) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	r.s.postauth = append(r.s.postauth, pa)
+	return nil
+}

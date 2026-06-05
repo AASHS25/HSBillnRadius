@@ -80,11 +80,16 @@ type RedisConfig struct {
 	DialTimeout time.Duration `env:"REDIS_DIAL_TIMEOUT" envDefault:"5s"`
 }
 
-// RadiusConfig configures the radius-service UDP listeners and CoA port.
+// RadiusConfig configures the radius-service UDP listeners, worker pool and
+// lookup cache TTLs.
 type RadiusConfig struct {
-	AuthAddr string `env:"RADIUS_AUTH_ADDR" envDefault:"0.0.0.0:1812"`
-	AcctAddr string `env:"RADIUS_ACCT_ADDR" envDefault:"0.0.0.0:1813"`
-	CoAPort  int    `env:"RADIUS_COA_PORT" envDefault:"3799"`
+	AuthAddr       string        `env:"RADIUS_AUTH_ADDR" envDefault:"0.0.0.0:1812"`
+	AcctAddr       string        `env:"RADIUS_ACCT_ADDR" envDefault:"0.0.0.0:1813"`
+	CoAPort        int           `env:"RADIUS_COA_PORT" envDefault:"3799"`
+	Workers        int           `env:"RADIUS_WORKERS" envDefault:"64"`
+	RequestTimeout time.Duration `env:"RADIUS_REQUEST_TIMEOUT" envDefault:"3s"`
+	NasCacheTTL    time.Duration `env:"RADIUS_NAS_CACHE_TTL" envDefault:"60s"`
+	UserCacheTTL   time.Duration `env:"RADIUS_USER_CACHE_TTL" envDefault:"45s"`
 }
 
 // Load reads configuration from the environment, applying a best-effort .env

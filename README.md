@@ -135,7 +135,10 @@ curl -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/j
 - [x] **M2 — Customer & Plan**: CRUD pelanggan, paket, bandwidth profile,
   mapping otomatis ke radcheck/radusergroup/radgroupreply (Mikrotik-Rate-Limit,
   Framed-Pool), grup isolir. sqlc + in-memory repo untuk test.
-- [ ] **M3 — RADIUS (Auth)** · **M4 — Accounting + CoA**
+- [x] **M3 — RADIUS (Auth)**: UDP server + bounded worker pool, NAS resolution
+  (cached), PAP/CHAP auth vs radcheck, Mikrotik VSA reply (rate-limit, pool),
+  radpostauth, Redis cache. Verified dengan klien RADIUS nyata.
+- [ ] **M4 — Accounting + CoA**
 - [ ] **M5 — Billing** · **M6 — Notifikasi WA** · **M7 — Payment Gateway**
 - [ ] **M8 — Voucher & Hotspot** · **M9 — Jaringan (OLT/ACS)** · **M10 — Client area + hardening**
 
