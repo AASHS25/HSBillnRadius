@@ -17,14 +17,18 @@ import (
 	goredis "github.com/redis/go-redis/v9"
 
 	"github.com/aashs25/hsbillnradius/internal/config"
+	"github.com/aashs25/hsbillnradius/internal/platform/cache"
 	"github.com/aashs25/hsbillnradius/internal/platform/httpserver"
 	"github.com/aashs25/hsbillnradius/internal/platform/logger"
 	"github.com/aashs25/hsbillnradius/internal/platform/password"
 	"github.com/aashs25/hsbillnradius/internal/platform/postgres"
+	"github.com/aashs25/hsbillnradius/internal/platform/radiusclient"
 	platformredis "github.com/aashs25/hsbillnradius/internal/platform/redis"
 	"github.com/aashs25/hsbillnradius/internal/platform/token"
 	"github.com/aashs25/hsbillnradius/internal/repo"
 	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
+	"github.com/aashs25/hsbillnradius/internal/service/billingsvc"
+	"github.com/aashs25/hsbillnradius/internal/service/coasvc"
 	"github.com/aashs25/hsbillnradius/internal/service/customersvc"
 	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
 	"github.com/aashs25/hsbillnradius/internal/transport/httpapi"
@@ -90,7 +94,10 @@ func run() error {
 	authService := authsvc.New(repos, store, hasher, tokens, cfg.Auth.RefreshTokenTTL, log)
 	planService := plansvc.New(repos, store, log)
 	customerService := customersvc.New(repos, store, log)
-	api := httpapi.New(authService, planService, customerService, tokens, log)
+	coaClient := radiusclient.New(cfg.Radius.CoAPort, cfg.Radius.RequestTimeout)
+	coaService := coasvc.New(repos, coaClient, cache.NewRedis(rdb), log)
+	billingService := billingsvc.New(repos, store, coaService, log)
+	api := httpapi.New(authService, planService, customerService, billingService, tokens, log)
 
 	router := newRouter(cfg, log, pool, rdb, api)
 

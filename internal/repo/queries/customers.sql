@@ -34,3 +34,15 @@ WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL;
 -- name: SoftDeleteCustomer :exec
 UPDATE customers SET deleted_at = now(), updated_at = now()
 WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL;
+
+-- name: SetCustomerActiveUntil :exec
+UPDATE customers SET active_until = $3, status = $4, updated_at = now()
+WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL;
+
+-- name: ListExpiredActiveCustomers :many
+SELECT id, tenant_id, pppoe_username, plan_id, status
+FROM customers
+WHERE deleted_at IS NULL AND status = 'active'
+  AND active_until IS NOT NULL AND active_until < now()
+ORDER BY active_until
+LIMIT $1;

@@ -99,6 +99,25 @@ func datePtr(v pgtype.Date) *time.Time {
 	return &t
 }
 
+// pgDate maps a (non-null) time to a valid date.
+func pgDate(t time.Time) pgtype.Date { return pgtype.Date{Time: t, Valid: true} }
+
+// dateVal returns the date's time, or the zero time when NULL.
+func dateVal(v pgtype.Date) time.Time {
+	if !v.Valid {
+		return time.Time{}
+	}
+	return v.Time
+}
+
+// pgTimestamptzPtr maps a *time.Time to a nullable timestamptz.
+func pgTimestamptzPtr(p *time.Time) pgtype.Timestamptz {
+	if p == nil {
+		return pgtype.Timestamptz{}
+	}
+	return pgtype.Timestamptz{Time: *p, Valid: true}
+}
+
 // --- model -> domain mappers ------------------------------------------------
 
 func toDomainTenant(m sqlc.Tenant) tenant.Tenant {
@@ -218,6 +237,7 @@ func toDomainCustomer(m sqlc.Customer) customer.Customer {
 		PppoeUsername: textVal(m.PppoeUsername),
 		PppoePassword: textVal(m.PppoePassword),
 		Notes:         m.Notes,
+		ActiveUntil:   tsPtr(m.ActiveUntil),
 		CreatedAt:     m.CreatedAt,
 		UpdatedAt:     m.UpdatedAt,
 	}

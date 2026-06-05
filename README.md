@@ -119,6 +119,10 @@ Semua di bawah `/api/v1`. Auth pakai `Authorization: Bearer <access_token>`.
 | GET | `/audit-logs` | `tenant.read` | Audit log tenant |
 | CRUD | `/plans` | `plan.manage` | Paket + bandwidth profile → sync radgroupreply |
 | CRUD | `/customers` | `customer.*` | Pelanggan → sync radcheck/radusergroup (PPPoE) |
+| POST | `/invoices/generate` | `invoice.manage` | Generate invoice bulanan (prorata) |
+| GET | `/invoices`, `/invoices/{id}` | `invoice.read` | Daftar / detail invoice + items |
+| POST | `/invoices/{id}/pay` | `payment.manage` | Bayar → ledger + extend + restore |
+| GET | `/reports/summary` | `invoice.read` | Pemasukan/pengeluaran/tunggakan |
 
 ```bash
 curl -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/json' \
@@ -141,7 +145,10 @@ curl -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/j
 - [x] **M4 — Accounting + CoA**: radacct (partisi bulanan), async batch writer,
   Start/Interim/Stop, Accounting-Response, CoA/Disconnect client, Isolate/Restore
   (ganti grup + kick sesi). Verified Start/Interim/Stop end-to-end.
-- [ ] **M5 — Billing** · **M6 — Notifikasi WA** · **M7 — Payment Gateway**
+- [x] **M5 — Billing**: invoice generator + prorata (fungsi murni), pajak (bps,
+  int64), status machine, pembayaran manual → ledger income + extend masa aktif +
+  restore RADIUS, laporan, scheduler (mark-overdue + auto-isolir scan). Verified.
+- [ ] **M6 — Notifikasi WA** · **M7 — Payment Gateway**
 - [ ] **M8 — Voucher & Hotspot** · **M9 — Jaringan (OLT/ACS)** · **M10 — Client area + hardening**
 
 ## Konvensi engineering

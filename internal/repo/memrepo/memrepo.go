@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/aashs25/hsbillnradius/internal/domain/audit"
+	"github.com/aashs25/hsbillnradius/internal/domain/billing"
 	"github.com/aashs25/hsbillnradius/internal/domain/customer"
 	"github.com/aashs25/hsbillnradius/internal/domain/iam"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
@@ -36,6 +37,10 @@ type Store struct {
 	nas       map[string]radius.Nas // keyed by IP
 	postauth  []radius.PostAuth
 	sessions  map[string]radius.AcctEvent // keyed by uniqueid
+	invoices  map[int64]billing.Invoice
+	items     []billing.InvoiceItem
+	payments  map[string]billing.Payment // keyed by idempotency key
+	ledger    []billing.LedgerEntry
 	allPerms  []string
 	seq       map[string]int64
 }
@@ -56,6 +61,8 @@ func New() *Store {
 		radreply:  map[string][]radius.Attr{},
 		nas:       map[string]radius.Nas{},
 		sessions:  map[string]radius.AcctEvent{},
+		invoices:  map[int64]billing.Invoice{},
+		payments:  map[string]billing.Payment{},
 		allPerms: []string{
 			"tenant.read", "tenant.update", "user.read", "user.create",
 			"role.manage", "plan.manage", "customer.create", "customer.read",
@@ -87,6 +94,7 @@ func (s *Store) Repositories() repo.Repositories {
 		RadiusMap:    &radiusRepo{s},
 		RadiusAuth:   &radiusAuthRepo{s},
 		Accounting:   &accountingRepo{s},
+		Billing:      &billingRepo{s},
 	}
 }
 

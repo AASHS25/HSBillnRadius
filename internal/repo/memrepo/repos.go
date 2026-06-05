@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/aashs25/hsbillnradius/internal/domain/audit"
+	"github.com/aashs25/hsbillnradius/internal/domain/billing"
 	"github.com/aashs25/hsbillnradius/internal/domain/customer"
 	"github.com/aashs25/hsbillnradius/internal/domain/iam"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
@@ -549,6 +550,35 @@ func (r *customerRepo) SoftDelete(_ context.Context, tenantID, id int64) error {
 	return nil
 }
 
+func (r *customerRepo) SetActiveUntil(_ context.Context, tenantID, id int64, until time.Time, status customer.Status) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	c, ok := r.s.customers[id]
+	if !ok || c.TenantID != tenantID {
+		return customer.ErrNotFound
+	}
+	u := until
+	c.ActiveUntil = &u
+	c.Status = status
+	r.s.customers[id] = c
+	return nil
+}
+
+func (r *customerRepo) ListExpiredActive(_ context.Context, limit int32) ([]customer.Expired, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []customer.Expired
+	for _, c := range r.s.customers {
+		if c.Status == customer.StatusActive && c.ActiveUntil != nil && c.ActiveUntil.Before(time.Now()) {
+			out = append(out, customer.Expired{ID: c.ID, TenantID: c.TenantID, PppoeUsername: c.PppoeUsername, PlanID: c.PlanID})
+			if int32(len(out)) >= limit {
+				break
+			}
+		}
+	}
+	return out, nil
+}
+
 // --- radius map -------------------------------------------------------------
 
 type radiusRepo struct{ s *Store }
@@ -693,4 +723,163 @@ func (r *accountingRepo) ActiveSessions(_ context.Context, tenantID int64, usern
 		}
 	}
 	return out, nil
+}
+
+// --- billing ----------------------------------------------------------------
+
+type billingRepo struct{ s *Store }
+
+func (r *billingRepo) CreateInvoice(_ context.Context, inv billing.Invoice) (billing.Invoice, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for _, ex := range r.s.invoices {
+		if ex.CustomerID == inv.CustomerID && ex.PeriodStart.Equal(inv.PeriodStart) {
+			return billing.Invoice{}, billing.ErrInvoiceExists
+		}
+	}
+	inv.ID = r.s.next("invoice")
+	inv.CreatedAt, inv.UpdatedAt = time.Now(), time.Now()
+	r.s.invoices[inv.ID] = inv
+	return inv, nil
+}
+
+func (r *billingRepo) AddInvoiceItem(_ context.Context, it billing.InvoiceItem) (billing.InvoiceItem, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	it.ID = r.s.next("item")
+	r.s.items = append(r.s.items, it)
+	return it, nil
+}
+
+func (r *billingRepo) GetInvoice(_ context.Context, tenantID, id int64) (billing.Invoice, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	inv, ok := r.s.invoices[id]
+	if !ok || inv.TenantID != tenantID {
+		return billing.Invoice{}, billing.ErrInvoiceNotFound
+	}
+	return inv, nil
+}
+
+func (r *billingRepo) InvoiceItems(_ context.Context, invoiceID int64) ([]billing.InvoiceItem, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []billing.InvoiceItem
+	for _, it := range r.s.items {
+		if it.InvoiceID == invoiceID {
+			out = append(out, it)
+		}
+	}
+	return out, nil
+}
+
+func (r *billingRepo) ListInvoices(_ context.Context, tenantID int64, limit, offset int32) ([]billing.Invoice, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []billing.Invoice
+	for _, inv := range r.s.invoices {
+		if inv.TenantID == tenantID {
+			out = append(out, inv)
+		}
+	}
+	return page(out, limit, offset), nil
+}
+
+func (r *billingRepo) SetInvoiceStatus(_ context.Context, tenantID, id int64, status billing.Status) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	if inv, ok := r.s.invoices[id]; ok && inv.TenantID == tenantID {
+		inv.Status = status
+		inv.UpdatedAt = time.Now()
+		r.s.invoices[id] = inv
+	}
+	return nil
+}
+
+func (r *billingRepo) MarkInvoicePaid(_ context.Context, tenantID, id int64) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	if inv, ok := r.s.invoices[id]; ok && inv.TenantID == tenantID {
+		now := time.Now()
+		inv.Status = billing.StatusPaid
+		inv.PaidAt = &now
+		r.s.invoices[id] = inv
+	}
+	return nil
+}
+
+func (r *billingRepo) MarkOverdue(_ context.Context) (int64, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var n int64
+	for id, inv := range r.s.invoices {
+		if inv.Status == billing.StatusUnpaid && inv.DueDate.Before(time.Now()) {
+			inv.Status = billing.StatusOverdue
+			r.s.invoices[id] = inv
+			n++
+		}
+	}
+	return n, nil
+}
+
+func (r *billingRepo) CreatePayment(_ context.Context, p billing.Payment) (billing.Payment, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	if _, exists := r.s.payments[p.IdempotencyKey]; exists {
+		return billing.Payment{}, billing.ErrPaymentNotUnique
+	}
+	p.ID = r.s.next("payment")
+	p.CreatedAt = time.Now()
+	r.s.payments[p.IdempotencyKey] = p
+	return p, nil
+}
+
+func (r *billingRepo) ListPayments(_ context.Context, tenantID int64, limit, offset int32) ([]billing.Payment, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []billing.Payment
+	for _, p := range r.s.payments {
+		if p.TenantID == tenantID {
+			out = append(out, p)
+		}
+	}
+	return page(out, limit, offset), nil
+}
+
+func (r *billingRepo) AddLedger(_ context.Context, e billing.LedgerEntry) (billing.LedgerEntry, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	e.ID = r.s.next("ledger")
+	e.CreatedAt = time.Now()
+	r.s.ledger = append(r.s.ledger, e)
+	return e, nil
+}
+
+func (r *billingRepo) SumLedger(_ context.Context, tenantID int64, from, to time.Time) (income, expense int64, err error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for _, e := range r.s.ledger {
+		if e.TenantID != tenantID || e.CreatedAt.Before(from) || !e.CreatedAt.Before(to) {
+			continue
+		}
+		switch e.Type {
+		case billing.LedgerIncome:
+			income += e.AmountIDR
+		case billing.LedgerExpense:
+			expense += e.AmountIDR
+		}
+	}
+	return income, expense, nil
+}
+
+func (r *billingRepo) Outstanding(_ context.Context, tenantID int64) (int64, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var total int64
+	for _, inv := range r.s.invoices {
+		if inv.TenantID == tenantID && (inv.Status == billing.StatusUnpaid || inv.Status == billing.StatusOverdue) {
+			total += inv.TotalIDR
+		}
+	}
+	return total, nil
 }

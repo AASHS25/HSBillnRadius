@@ -28,7 +28,7 @@ INSERT INTO customers (
     lat, lng, install_date, status, plan_id, reseller_id, balance_idr,
     pppoe_username, pppoe_password, notes
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-RETURNING id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at
+RETURNING id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until
 `
 
 type CreateCustomerParams struct {
@@ -94,12 +94,13 @@ func (q *Queries) CreateCustomer(ctx context.Context, arg CreateCustomerParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.ActiveUntil,
 	)
 	return i, err
 }
 
 const getCustomerByID = `-- name: GetCustomerByID :one
-SELECT id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at FROM customers WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
+SELECT id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until FROM customers WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
 `
 
 type GetCustomerByIDParams struct {
@@ -132,12 +133,13 @@ func (q *Queries) GetCustomerByID(ctx context.Context, arg GetCustomerByIDParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.ActiveUntil,
 	)
 	return i, err
 }
 
 const listCustomersByTenant = `-- name: ListCustomersByTenant :many
-SELECT id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at FROM customers
+SELECT id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until FROM customers
 WHERE tenant_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -180,6 +182,7 @@ func (q *Queries) ListCustomersByTenant(ctx context.Context, arg ListCustomersBy
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.DeletedAt,
+			&i.ActiveUntil,
 		); err != nil {
 			return nil, err
 		}
@@ -189,6 +192,71 @@ func (q *Queries) ListCustomersByTenant(ctx context.Context, arg ListCustomersBy
 		return nil, err
 	}
 	return items, nil
+}
+
+const listExpiredActiveCustomers = `-- name: ListExpiredActiveCustomers :many
+SELECT id, tenant_id, pppoe_username, plan_id, status
+FROM customers
+WHERE deleted_at IS NULL AND status = 'active'
+  AND active_until IS NOT NULL AND active_until < now()
+ORDER BY active_until
+LIMIT $1
+`
+
+type ListExpiredActiveCustomersRow struct {
+	ID            int64          `json:"id"`
+	TenantID      int64          `json:"tenant_id"`
+	PppoeUsername pgtype.Text    `json:"pppoe_username"`
+	PlanID        pgtype.Int8    `json:"plan_id"`
+	Status        CustomerStatus `json:"status"`
+}
+
+func (q *Queries) ListExpiredActiveCustomers(ctx context.Context, limit int32) ([]ListExpiredActiveCustomersRow, error) {
+	rows, err := q.db.Query(ctx, listExpiredActiveCustomers, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListExpiredActiveCustomersRow{}
+	for rows.Next() {
+		var i ListExpiredActiveCustomersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.TenantID,
+			&i.PppoeUsername,
+			&i.PlanID,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const setCustomerActiveUntil = `-- name: SetCustomerActiveUntil :exec
+UPDATE customers SET active_until = $3, status = $4, updated_at = now()
+WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
+`
+
+type SetCustomerActiveUntilParams struct {
+	ID          int64              `json:"id"`
+	TenantID    int64              `json:"tenant_id"`
+	ActiveUntil pgtype.Timestamptz `json:"active_until"`
+	Status      CustomerStatus     `json:"status"`
+}
+
+func (q *Queries) SetCustomerActiveUntil(ctx context.Context, arg SetCustomerActiveUntilParams) error {
+	_, err := q.db.Exec(ctx, setCustomerActiveUntil,
+		arg.ID,
+		arg.TenantID,
+		arg.ActiveUntil,
+		arg.Status,
+	)
+	return err
 }
 
 const softDeleteCustomer = `-- name: SoftDeleteCustomer :exec
@@ -213,7 +281,7 @@ UPDATE customers SET
     reseller_id = $13, pppoe_username = $14, pppoe_password = $15, notes = $16,
     updated_at = now()
 WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
-RETURNING id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at
+RETURNING id, tenant_id, customer_no, name, id_card_no, email, phone_wa, address, lat, lng, install_date, status, plan_id, reseller_id, balance_idr, pppoe_username, pppoe_password, notes, created_at, updated_at, deleted_at, active_until
 `
 
 type UpdateCustomerParams struct {
@@ -277,6 +345,7 @@ func (q *Queries) UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) 
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.ActiveUntil,
 	)
 	return i, err
 }

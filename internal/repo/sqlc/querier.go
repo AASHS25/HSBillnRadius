@@ -16,7 +16,11 @@ type Querier interface {
 	CountPlansByTenant(ctx context.Context, tenantID int64) (int64, error)
 	CountUsersByTenant(ctx context.Context, tenantID int64) (int64, error)
 	CreateCustomer(ctx context.Context, arg CreateCustomerParams) (Customer, error)
+	// Idempotent per (customer, period): a conflict returns no row, which the repo
+	// maps to ErrInvoiceExists.
+	CreateInvoice(ctx context.Context, arg CreateInvoiceParams) (Invoice, error)
 	CreateNas(ctx context.Context, arg CreateNasParams) (Na, error)
+	CreatePayment(ctx context.Context, arg CreatePaymentParams) (Payment, error)
 	CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
 	CreateRole(ctx context.Context, arg CreateRoleParams) (Role, error)
@@ -30,6 +34,7 @@ type Querier interface {
 	DeleteRadUserGroupByUser(ctx context.Context, arg DeleteRadUserGroupByUserParams) error
 	GetBandwidthProfileByPlan(ctx context.Context, planID int64) (BandwidthProfile, error)
 	GetCustomerByID(ctx context.Context, arg GetCustomerByIDParams) (Customer, error)
+	GetInvoiceByID(ctx context.Context, arg GetInvoiceByIDParams) (Invoice, error)
 	// Read-side queries used by the radius-service auth handler.
 	GetNasByIP(ctx context.Context, nasname string) (GetNasByIPRow, error)
 	GetPlanByID(ctx context.Context, arg GetPlanByIDParams) (Plan, error)
@@ -44,6 +49,8 @@ type Querier interface {
 	GrantAllPermissionsToRole(ctx context.Context, roleID int64) error
 	InsertAcctStart(ctx context.Context, arg InsertAcctStartParams) error
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
+	InsertInvoiceItem(ctx context.Context, arg InsertInvoiceItemParams) (InvoiceItem, error)
+	InsertLedgerEntry(ctx context.Context, arg InsertLedgerEntryParams) (LedgerEntry, error)
 	InsertRadCheck(ctx context.Context, arg InsertRadCheckParams) error
 	InsertRadGroupReply(ctx context.Context, arg InsertRadGroupReplyParams) error
 	InsertRadPostAuth(ctx context.Context, arg InsertRadPostAuthParams) error
@@ -52,7 +59,12 @@ type Querier interface {
 	ListActiveSessions(ctx context.Context, arg ListActiveSessionsParams) ([]ListActiveSessionsRow, error)
 	ListAuditLogs(ctx context.Context, arg ListAuditLogsParams) ([]AuditLog, error)
 	ListCustomersByTenant(ctx context.Context, arg ListCustomersByTenantParams) ([]Customer, error)
+	ListExpiredActiveCustomers(ctx context.Context, limit int32) ([]ListExpiredActiveCustomersRow, error)
+	ListInvoiceItems(ctx context.Context, invoiceID int64) ([]InvoiceItem, error)
+	ListInvoicesByCustomer(ctx context.Context, arg ListInvoicesByCustomerParams) ([]Invoice, error)
+	ListInvoicesByTenant(ctx context.Context, arg ListInvoicesByTenantParams) ([]Invoice, error)
 	ListNasByTenant(ctx context.Context, tenantID int64) ([]Na, error)
+	ListPaymentsByTenant(ctx context.Context, arg ListPaymentsByTenantParams) ([]Payment, error)
 	ListPermissionCodesByRole(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionIDsByCodes(ctx context.Context, dollar_1 []string) ([]int64, error)
 	ListPermissions(ctx context.Context) ([]Permission, error)
@@ -63,12 +75,18 @@ type Querier interface {
 	ListRadUserGroups(ctx context.Context, arg ListRadUserGroupsParams) ([]ListRadUserGroupsRow, error)
 	ListRolesByTenant(ctx context.Context, tenantID int64) ([]Role, error)
 	ListUsersByTenant(ctx context.Context, arg ListUsersByTenantParams) ([]User, error)
+	MarkInvoicePaid(ctx context.Context, arg MarkInvoicePaidParams) error
+	MarkOverdueInvoices(ctx context.Context) (int64, error)
 	RevokeAllUserRefreshTokens(ctx context.Context, userID int64) error
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
+	SetCustomerActiveUntil(ctx context.Context, arg SetCustomerActiveUntilParams) error
+	SetInvoiceStatus(ctx context.Context, arg SetInvoiceStatusParams) error
 	SetRadUserGroup(ctx context.Context, arg SetRadUserGroupParams) error
 	SoftDeleteCustomer(ctx context.Context, arg SoftDeleteCustomerParams) error
 	SoftDeletePlan(ctx context.Context, arg SoftDeletePlanParams) error
 	SoftDeleteUser(ctx context.Context, arg SoftDeleteUserParams) error
+	SumLedgerByType(ctx context.Context, arg SumLedgerByTypeParams) ([]SumLedgerByTypeRow, error)
+	SumOutstanding(ctx context.Context, tenantID int64) (int64, error)
 	UpdateAcctInterim(ctx context.Context, arg UpdateAcctInterimParams) error
 	UpdateAcctStop(ctx context.Context, arg UpdateAcctStopParams) error
 	UpdateCustomer(ctx context.Context, arg UpdateCustomerParams) (Customer, error)

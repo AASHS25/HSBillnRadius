@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/aashs25/hsbillnradius/internal/domain/customer"
 	"github.com/aashs25/hsbillnradius/internal/repo/sqlc"
@@ -110,6 +111,35 @@ func (r *customerRepo) SoftDelete(ctx context.Context, tenantID, id int64) error
 		return fmt.Errorf("soft delete customer: %w", err)
 	}
 	return nil
+}
+
+func (r *customerRepo) SetActiveUntil(ctx context.Context, tenantID, id int64, until time.Time, status customer.Status) error {
+	if err := r.q.SetCustomerActiveUntil(ctx, sqlc.SetCustomerActiveUntilParams{
+		ID:          id,
+		TenantID:    tenantID,
+		ActiveUntil: pgTimestamptzPtr(&until),
+		Status:      sqlc.CustomerStatus(status),
+	}); err != nil {
+		return fmt.Errorf("set active until: %w", err)
+	}
+	return nil
+}
+
+func (r *customerRepo) ListExpiredActive(ctx context.Context, limit int32) ([]customer.Expired, error) {
+	rows, err := r.q.ListExpiredActiveCustomers(ctx, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list expired active customers: %w", err)
+	}
+	out := make([]customer.Expired, len(rows))
+	for i, m := range rows {
+		out[i] = customer.Expired{
+			ID:            m.ID,
+			TenantID:      m.TenantID,
+			PppoeUsername: textVal(m.PppoeUsername),
+			PlanID:        int8Ptr(m.PlanID),
+		}
+	}
+	return out, nil
 }
 
 // mapCustomerErr translates unique-violation errors based on the constraint.

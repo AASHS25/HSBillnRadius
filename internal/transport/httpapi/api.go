@@ -14,6 +14,7 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
+	"github.com/aashs25/hsbillnradius/internal/service/billingsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/customersvc"
 	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
 )
@@ -23,17 +24,19 @@ type API struct {
 	auth      *authsvc.Service
 	plans     *plansvc.Service
 	customers *customersvc.Service
+	billing   *billingsvc.Service
 	tokens    AccessParser
 	valid     *validator.Validate
 	log       *slog.Logger
 }
 
 // New builds the API delivery layer.
-func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, tokens AccessParser, log *slog.Logger) *API {
+func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, tokens AccessParser, log *slog.Logger) *API {
 	return &API{
 		auth:      auth,
 		plans:     plans,
 		customers: customers,
+		billing:   billing,
 		tokens:    tokens,
 		valid:     validator.New(validator.WithRequiredStructEnabled()),
 		log:       log,
@@ -73,6 +76,15 @@ func (a *API) Mount(r chi.Router) {
 				r.With(RequirePermission("customer.update", a.log)).Put("/{id}", a.handleUpdateCustomer)
 				r.With(RequirePermission("customer.delete", a.log)).Delete("/{id}", a.handleDeleteCustomer)
 			})
+
+			r.Route("/invoices", func(r chi.Router) {
+				r.With(RequirePermission("invoice.manage", a.log)).Post("/generate", a.handleGenerateInvoice)
+				r.With(RequirePermission("invoice.read", a.log)).Get("/", a.handleListInvoices)
+				r.With(RequirePermission("invoice.read", a.log)).Get("/{id}", a.handleGetInvoice)
+				r.With(RequirePermission("payment.manage", a.log)).Post("/{id}/pay", a.handlePayInvoice)
+				r.With(RequirePermission("invoice.manage", a.log)).Post("/{id}/void", a.handleVoidInvoice)
+			})
+			r.With(RequirePermission("invoice.read", a.log)).Get("/reports/summary", a.handleReportSummary)
 		})
 	})
 }

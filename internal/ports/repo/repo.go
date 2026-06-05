@@ -6,8 +6,10 @@ package repo
 
 import (
 	"context"
+	"time"
 
 	"github.com/aashs25/hsbillnradius/internal/domain/audit"
+	"github.com/aashs25/hsbillnradius/internal/domain/billing"
 	"github.com/aashs25/hsbillnradius/internal/domain/customer"
 	"github.com/aashs25/hsbillnradius/internal/domain/iam"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
@@ -94,6 +96,25 @@ type CustomerRepository interface {
 	Update(ctx context.Context, c customer.Customer) (customer.Customer, error)
 	UpdateStatus(ctx context.Context, tenantID, id int64, status customer.Status) error
 	SoftDelete(ctx context.Context, tenantID, id int64) error
+	SetActiveUntil(ctx context.Context, tenantID, id int64, until time.Time, status customer.Status) error
+	ListExpiredActive(ctx context.Context, limit int32) ([]customer.Expired, error)
+}
+
+// BillingRepository persists invoices, items, payments and the cashbook ledger.
+type BillingRepository interface {
+	CreateInvoice(ctx context.Context, inv billing.Invoice) (billing.Invoice, error)
+	AddInvoiceItem(ctx context.Context, it billing.InvoiceItem) (billing.InvoiceItem, error)
+	GetInvoice(ctx context.Context, tenantID, id int64) (billing.Invoice, error)
+	InvoiceItems(ctx context.Context, invoiceID int64) ([]billing.InvoiceItem, error)
+	ListInvoices(ctx context.Context, tenantID int64, limit, offset int32) ([]billing.Invoice, error)
+	SetInvoiceStatus(ctx context.Context, tenantID, id int64, status billing.Status) error
+	MarkInvoicePaid(ctx context.Context, tenantID, id int64) error
+	MarkOverdue(ctx context.Context) (int64, error)
+	CreatePayment(ctx context.Context, p billing.Payment) (billing.Payment, error)
+	ListPayments(ctx context.Context, tenantID int64, limit, offset int32) ([]billing.Payment, error)
+	AddLedger(ctx context.Context, e billing.LedgerEntry) (billing.LedgerEntry, error)
+	SumLedger(ctx context.Context, tenantID int64, from, to time.Time) (income, expense int64, err error)
+	Outstanding(ctx context.Context, tenantID int64) (int64, error)
 }
 
 // RadiusAuthRepository is the read side used by the radius-service during
@@ -140,6 +161,7 @@ type Repositories struct {
 	RadiusMap    RadiusMapRepository
 	RadiusAuth   RadiusAuthRepository
 	Accounting   AccountingRepository
+	Billing      BillingRepository
 }
 
 // TxManager runs fn inside a database transaction, providing repositories bound

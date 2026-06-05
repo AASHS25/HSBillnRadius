@@ -102,6 +102,267 @@ func (ns NullCustomerStatus) Value() (driver.Value, error) {
 	return string(ns.CustomerStatus), nil
 }
 
+type InvoiceItemType string
+
+const (
+	InvoiceItemTypePlan    InvoiceItemType = "plan"
+	InvoiceItemTypeAddon   InvoiceItemType = "addon"
+	InvoiceItemTypeInstall InvoiceItemType = "install"
+	InvoiceItemTypeDevice  InvoiceItemType = "device"
+)
+
+func (e *InvoiceItemType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = InvoiceItemType(s)
+	case string:
+		*e = InvoiceItemType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for InvoiceItemType: %T", src)
+	}
+	return nil
+}
+
+type NullInvoiceItemType struct {
+	InvoiceItemType InvoiceItemType `json:"invoice_item_type"`
+	Valid           bool            `json:"valid"` // Valid is true if InvoiceItemType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullInvoiceItemType) Scan(value interface{}) error {
+	if value == nil {
+		ns.InvoiceItemType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.InvoiceItemType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullInvoiceItemType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.InvoiceItemType), nil
+}
+
+type InvoiceStatus string
+
+const (
+	InvoiceStatusDraft   InvoiceStatus = "draft"
+	InvoiceStatusUnpaid  InvoiceStatus = "unpaid"
+	InvoiceStatusPaid    InvoiceStatus = "paid"
+	InvoiceStatusOverdue InvoiceStatus = "overdue"
+	InvoiceStatusVoid    InvoiceStatus = "void"
+)
+
+func (e *InvoiceStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = InvoiceStatus(s)
+	case string:
+		*e = InvoiceStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for InvoiceStatus: %T", src)
+	}
+	return nil
+}
+
+type NullInvoiceStatus struct {
+	InvoiceStatus InvoiceStatus `json:"invoice_status"`
+	Valid         bool          `json:"valid"` // Valid is true if InvoiceStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullInvoiceStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.InvoiceStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.InvoiceStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullInvoiceStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.InvoiceStatus), nil
+}
+
+type InvoiceType string
+
+const (
+	InvoiceTypePrepaid  InvoiceType = "prepaid"
+	InvoiceTypePostpaid InvoiceType = "postpaid"
+)
+
+func (e *InvoiceType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = InvoiceType(s)
+	case string:
+		*e = InvoiceType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for InvoiceType: %T", src)
+	}
+	return nil
+}
+
+type NullInvoiceType struct {
+	InvoiceType InvoiceType `json:"invoice_type"`
+	Valid       bool        `json:"valid"` // Valid is true if InvoiceType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullInvoiceType) Scan(value interface{}) error {
+	if value == nil {
+		ns.InvoiceType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.InvoiceType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullInvoiceType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.InvoiceType), nil
+}
+
+type LedgerType string
+
+const (
+	LedgerTypeIncome  LedgerType = "income"
+	LedgerTypeExpense LedgerType = "expense"
+)
+
+func (e *LedgerType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = LedgerType(s)
+	case string:
+		*e = LedgerType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for LedgerType: %T", src)
+	}
+	return nil
+}
+
+type NullLedgerType struct {
+	LedgerType LedgerType `json:"ledger_type"`
+	Valid      bool       `json:"valid"` // Valid is true if LedgerType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullLedgerType) Scan(value interface{}) error {
+	if value == nil {
+		ns.LedgerType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.LedgerType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullLedgerType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.LedgerType), nil
+}
+
+type PaymentMethod string
+
+const (
+	PaymentMethodCash     PaymentMethod = "cash"
+	PaymentMethodTransfer PaymentMethod = "transfer"
+	PaymentMethodGateway  PaymentMethod = "gateway"
+	PaymentMethodBalance  PaymentMethod = "balance"
+)
+
+func (e *PaymentMethod) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentMethod(s)
+	case string:
+		*e = PaymentMethod(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentMethod: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentMethod struct {
+	PaymentMethod PaymentMethod `json:"payment_method"`
+	Valid         bool          `json:"valid"` // Valid is true if PaymentMethod is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentMethod) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentMethod, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentMethod.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentMethod) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentMethod), nil
+}
+
+type PaymentStatus string
+
+const (
+	PaymentStatusPending PaymentStatus = "pending"
+	PaymentStatusSettled PaymentStatus = "settled"
+	PaymentStatusFailed  PaymentStatus = "failed"
+	PaymentStatusExpired PaymentStatus = "expired"
+)
+
+func (e *PaymentStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PaymentStatus(s)
+	case string:
+		*e = PaymentStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PaymentStatus: %T", src)
+	}
+	return nil
+}
+
+type NullPaymentStatus struct {
+	PaymentStatus PaymentStatus `json:"payment_status"`
+	Valid         bool          `json:"valid"` // Valid is true if PaymentStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPaymentStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.PaymentStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PaymentStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPaymentStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PaymentStatus), nil
+}
+
 type ServiceType string
 
 const (
@@ -240,6 +501,7 @@ type Customer struct {
 	CreatedAt     time.Time          `json:"created_at"`
 	UpdatedAt     time.Time          `json:"updated_at"`
 	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
+	ActiveUntil   pgtype.Timestamptz `json:"active_until"`
 }
 
 type CustomerDocument struct {
@@ -248,6 +510,49 @@ type CustomerDocument struct {
 	Type       string    `json:"type"`
 	FilePath   string    `json:"file_path"`
 	CreatedAt  time.Time `json:"created_at"`
+}
+
+type Invoice struct {
+	ID          int64              `json:"id"`
+	TenantID    int64              `json:"tenant_id"`
+	InvoiceNo   string             `json:"invoice_no"`
+	CustomerID  int64              `json:"customer_id"`
+	PeriodStart pgtype.Date        `json:"period_start"`
+	PeriodEnd   pgtype.Date        `json:"period_end"`
+	SubtotalIdr int64              `json:"subtotal_idr"`
+	TaxIdr      int64              `json:"tax_idr"`
+	DiscountIdr int64              `json:"discount_idr"`
+	TotalIdr    int64              `json:"total_idr"`
+	DueDate     pgtype.Date        `json:"due_date"`
+	Status      InvoiceStatus      `json:"status"`
+	Type        InvoiceType        `json:"type"`
+	IssuedAt    pgtype.Timestamptz `json:"issued_at"`
+	PaidAt      pgtype.Timestamptz `json:"paid_at"`
+	CreatedAt   time.Time          `json:"created_at"`
+	UpdatedAt   time.Time          `json:"updated_at"`
+}
+
+type InvoiceItem struct {
+	ID           int64           `json:"id"`
+	InvoiceID    int64           `json:"invoice_id"`
+	Description  string          `json:"description"`
+	Qty          int32           `json:"qty"`
+	UnitPriceIdr int64           `json:"unit_price_idr"`
+	AmountIdr    int64           `json:"amount_idr"`
+	Type         InvoiceItemType `json:"type"`
+}
+
+type LedgerEntry struct {
+	ID          int64       `json:"id"`
+	TenantID    int64       `json:"tenant_id"`
+	Type        LedgerType  `json:"type"`
+	Category    string      `json:"category"`
+	AmountIdr   int64       `json:"amount_idr"`
+	RefType     string      `json:"ref_type"`
+	RefID       pgtype.Int8 `json:"ref_id"`
+	Description string      `json:"description"`
+	CreatedBy   pgtype.Int8 `json:"created_by"`
+	CreatedAt   time.Time   `json:"created_at"`
 }
 
 type Na struct {
@@ -263,6 +568,23 @@ type Na struct {
 	Description string      `json:"description"`
 	CreatedAt   time.Time   `json:"created_at"`
 	UpdatedAt   time.Time   `json:"updated_at"`
+}
+
+type Payment struct {
+	ID               int64              `json:"id"`
+	TenantID         int64              `json:"tenant_id"`
+	InvoiceID        pgtype.Int8        `json:"invoice_id"`
+	CustomerID       int64              `json:"customer_id"`
+	AmountIdr        int64              `json:"amount_idr"`
+	Method           PaymentMethod      `json:"method"`
+	GatewayProvider  string             `json:"gateway_provider"`
+	GatewayRef       pgtype.Text        `json:"gateway_ref"`
+	Status           PaymentStatus      `json:"status"`
+	PaidAt           pgtype.Timestamptz `json:"paid_at"`
+	VerifiedByUserID pgtype.Int8        `json:"verified_by_user_id"`
+	IdempotencyKey   string             `json:"idempotency_key"`
+	RawCallback      []byte             `json:"raw_callback"`
+	CreatedAt        time.Time          `json:"created_at"`
 }
 
 type Permission struct {

@@ -60,6 +60,7 @@ type Customer struct {
 	PppoeUsername string
 	PppoePassword string
 	Notes         string
+	ActiveUntil   *time.Time
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -67,6 +68,14 @@ type Customer struct {
 // HasPPPoECredentials reports whether the customer has a username+password set.
 func (c Customer) HasPPPoECredentials() bool {
 	return c.PppoeUsername != "" && c.PppoePassword != ""
+}
+
+// Expired is the minimal projection used by the auto-isolir scan.
+type Expired struct {
+	ID            int64
+	TenantID      int64
+	PppoeUsername string
+	PlanID        *int64
 }
 
 // Validate enforces customer invariants.
