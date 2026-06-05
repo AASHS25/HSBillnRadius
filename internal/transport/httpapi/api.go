@@ -17,6 +17,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/service/billingsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/customersvc"
 	"github.com/aashs25/hsbillnradius/internal/service/notifysvc"
+	"github.com/aashs25/hsbillnradius/internal/service/paymentsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
 )
 
@@ -27,19 +28,21 @@ type API struct {
 	customers *customersvc.Service
 	billing   *billingsvc.Service
 	notify    *notifysvc.Service
+	payments  *paymentsvc.Service
 	tokens    AccessParser
 	valid     *validator.Validate
 	log       *slog.Logger
 }
 
 // New builds the API delivery layer.
-func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, tokens AccessParser, log *slog.Logger) *API {
+func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, tokens AccessParser, log *slog.Logger) *API {
 	return &API{
 		auth:      auth,
 		plans:     plans,
 		customers: customers,
 		billing:   billing,
 		notify:    notify,
+		payments:  payments,
 		tokens:    tokens,
 		valid:     validator.New(validator.WithRequiredStructEnabled()),
 		log:       log,
@@ -55,6 +58,9 @@ func (a *API) Mount(r chi.Router) {
 			r.Post("/refresh", a.handleRefresh)
 			r.Post("/logout", a.handleLogout)
 		})
+
+		// Public payment webhooks (verified by provider signature, not JWT).
+		r.Post("/webhooks/payment/{provider}", a.handlePaymentWebhook)
 
 		// Authenticated routes.
 		r.Group(func(r chi.Router) {
@@ -94,6 +100,11 @@ func (a *API) Mount(r chi.Router) {
 				r.Post("/gateways", a.handleConfigureGateway)
 				r.Post("/templates", a.handleUpsertTemplate)
 				r.Post("/send", a.handleSendNotification)
+			})
+
+			r.Route("/payments", func(r chi.Router) {
+				r.With(RequirePermission("tenant.update", a.log)).Post("/gateways", a.handleConfigurePaymentGateway)
+				r.With(RequirePermission("payment.manage", a.log)).Post("/charge", a.handleCreateCharge)
 			})
 		})
 	})

@@ -448,6 +448,50 @@ func (ns NullPaymentStatus) Value() (driver.Value, error) {
 	return string(ns.PaymentStatus), nil
 }
 
+type PgProvider string
+
+const (
+	PgProviderMidtrans PgProvider = "midtrans"
+	PgProviderXendit   PgProvider = "xendit"
+	PgProviderDuitku   PgProvider = "duitku"
+	PgProviderTripay   PgProvider = "tripay"
+)
+
+func (e *PgProvider) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PgProvider(s)
+	case string:
+		*e = PgProvider(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PgProvider: %T", src)
+	}
+	return nil
+}
+
+type NullPgProvider struct {
+	PgProvider PgProvider `json:"pg_provider"`
+	Valid      bool       `json:"valid"` // Valid is true if PgProvider is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPgProvider) Scan(value interface{}) error {
+	if value == nil {
+		ns.PgProvider, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PgProvider.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPgProvider) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PgProvider), nil
+}
+
 type ServiceType string
 
 const (
@@ -754,6 +798,17 @@ type Payment struct {
 	IdempotencyKey   string             `json:"idempotency_key"`
 	RawCallback      []byte             `json:"raw_callback"`
 	CreatedAt        time.Time          `json:"created_at"`
+}
+
+type PaymentGateway struct {
+	ID           int64      `json:"id"`
+	TenantID     int64      `json:"tenant_id"`
+	Provider     PgProvider `json:"provider"`
+	Config       []byte     `json:"config"`
+	IsActive     bool       `json:"is_active"`
+	IsProduction bool       `json:"is_production"`
+	CreatedAt    time.Time  `json:"created_at"`
+	UpdatedAt    time.Time  `json:"updated_at"`
 }
 
 type Permission struct {

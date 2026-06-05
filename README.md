@@ -152,7 +152,11 @@ curl -X POST localhost:8080/api/v1/auth/register -H 'Content-Type: application/j
   antrian transaksional (notification_logs sebagai queue, dedup idempoten,
   backoff retry), template render, worker processor. Auto-notif "paid" dari
   billing. Verified end-to-end (mock provider).
-- [ ] **M7 — Payment Gateway**
+- [x] **M7 — Payment Gateway**: interface (CreateCharge/VerifyCallback), provider
+  midtrans (SHA-512 signature) + xendit (callback-token), webhook publik
+  `/webhooks/payment/{provider}` dengan verifikasi + idempotency + settlement
+  transaksional (invoice paid + ledger + extend + restore + notif), polling
+  fallback. Verified end-to-end (callback ber-signature → invoice lunas).
 - [ ] **M8 — Voucher & Hotspot** · **M9 — Jaringan (OLT/ACS)** · **M10 — Client area + hardening**
 
 ## Konvensi engineering

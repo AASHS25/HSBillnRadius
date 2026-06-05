@@ -998,3 +998,75 @@ func (r *notificationRepo) CreateGateway(_ context.Context, g notification.Gatew
 	r.s.gateways[g.TenantID] = g
 	return g, nil
 }
+
+func (r *billingRepo) GetPaymentByRef(_ context.Context, ref string) (billing.Payment, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for _, p := range r.s.payments {
+		if p.GatewayRef == ref {
+			return p, nil
+		}
+	}
+	return billing.Payment{}, billing.ErrPaymentNotFound
+}
+
+func (r *billingRepo) SettlePayment(_ context.Context, id int64, _ []byte) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for k, p := range r.s.payments {
+		if p.ID == id {
+			p.Status = billing.PaySettled
+			now := time.Now()
+			p.PaidAt = &now
+			r.s.payments[k] = p
+		}
+	}
+	return nil
+}
+
+func (r *billingRepo) MarkPaymentStatus(_ context.Context, id int64, status billing.PaymentStatus, _ []byte) error {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	for k, p := range r.s.payments {
+		if p.ID == id {
+			p.Status = status
+			r.s.payments[k] = p
+		}
+	}
+	return nil
+}
+
+func (r *billingRepo) ListPendingGatewayPayments(_ context.Context, olderThan time.Time, limit int32) ([]billing.Payment, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []billing.Payment
+	for _, p := range r.s.payments {
+		if p.Status == billing.PayPending && p.Method == billing.MethodGateway && p.CreatedAt.Before(olderThan) {
+			out = append(out, p)
+			if int32(len(out)) >= limit {
+				break
+			}
+		}
+	}
+	return out, nil
+}
+
+func (r *billingRepo) GetGatewayConfig(_ context.Context, tenantID int64, provider string) (billing.GatewayConfig, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	cfg, ok := r.s.pgGateways[fmt.Sprintf("%d|%s", tenantID, provider)]
+	if !ok || !cfg.IsActive {
+		return billing.GatewayConfig{}, billing.ErrGatewayNotEnabled
+	}
+	return cfg, nil
+}
+
+func (r *billingRepo) UpsertGatewayConfig(_ context.Context, cfg billing.GatewayConfig) (billing.GatewayConfig, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	if cfg.ID == 0 {
+		cfg.ID = r.s.next("pggateway")
+	}
+	r.s.pgGateways[fmt.Sprintf("%d|%s", cfg.TenantID, cfg.Provider)] = cfg
+	return cfg, nil
+}

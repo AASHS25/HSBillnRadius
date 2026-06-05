@@ -43,6 +43,8 @@ type Querier interface {
 	GetInvoiceByID(ctx context.Context, arg GetInvoiceByIDParams) (Invoice, error)
 	// Read-side queries used by the radius-service auth handler.
 	GetNasByIP(ctx context.Context, nasname string) (GetNasByIPRow, error)
+	GetPaymentByGatewayRef(ctx context.Context, gatewayRef pgtype.Text) (Payment, error)
+	GetPaymentGateway(ctx context.Context, arg GetPaymentGatewayParams) (PaymentGateway, error)
 	GetPlanByID(ctx context.Context, arg GetPlanByIDParams) (Plan, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRoleByID(ctx context.Context, id int64) (Role, error)
@@ -73,6 +75,7 @@ type Querier interface {
 	ListNasByTenant(ctx context.Context, tenantID int64) ([]Na, error)
 	ListNotifications(ctx context.Context, arg ListNotificationsParams) ([]NotificationLog, error)
 	ListPaymentsByTenant(ctx context.Context, arg ListPaymentsByTenantParams) ([]Payment, error)
+	ListPendingGatewayPayments(ctx context.Context, arg ListPendingGatewayPaymentsParams) ([]Payment, error)
 	ListPermissionCodesByRole(ctx context.Context, roleID int64) ([]string, error)
 	ListPermissionIDsByCodes(ctx context.Context, dollar_1 []string) ([]int64, error)
 	ListPermissions(ctx context.Context) ([]Permission, error)
@@ -86,12 +89,14 @@ type Querier interface {
 	MarkInvoicePaid(ctx context.Context, arg MarkInvoicePaidParams) error
 	MarkNotificationSent(ctx context.Context, arg MarkNotificationSentParams) error
 	MarkOverdueInvoices(ctx context.Context) (int64, error)
+	MarkPaymentStatus(ctx context.Context, arg MarkPaymentStatusParams) error
 	RetryNotification(ctx context.Context, arg RetryNotificationParams) error
 	RevokeAllUserRefreshTokens(ctx context.Context, userID int64) error
 	RevokeRefreshToken(ctx context.Context, tokenHash string) error
 	SetCustomerActiveUntil(ctx context.Context, arg SetCustomerActiveUntilParams) error
 	SetInvoiceStatus(ctx context.Context, arg SetInvoiceStatusParams) error
 	SetRadUserGroup(ctx context.Context, arg SetRadUserGroupParams) error
+	SettlePayment(ctx context.Context, arg SettlePaymentParams) error
 	SoftDeleteCustomer(ctx context.Context, arg SoftDeleteCustomerParams) error
 	SoftDeletePlan(ctx context.Context, arg SoftDeletePlanParams) error
 	SoftDeleteUser(ctx context.Context, arg SoftDeleteUserParams) error
@@ -108,6 +113,7 @@ type Querier interface {
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
 	UpsertBandwidthProfile(ctx context.Context, arg UpsertBandwidthProfileParams) (BandwidthProfile, error)
 	UpsertGateway(ctx context.Context, arg UpsertGatewayParams) (WaGateway, error)
+	UpsertPaymentGateway(ctx context.Context, arg UpsertPaymentGatewayParams) (PaymentGateway, error)
 	UpsertTemplate(ctx context.Context, arg UpsertTemplateParams) (MessageTemplate, error)
 }
 

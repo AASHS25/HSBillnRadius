@@ -27,6 +27,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/platform/radiusclient"
 	platformredis "github.com/aashs25/hsbillnradius/internal/platform/redis"
 	"github.com/aashs25/hsbillnradius/internal/platform/token"
+	"github.com/aashs25/hsbillnradius/internal/ports/payment"
 	"github.com/aashs25/hsbillnradius/internal/ports/wa"
 	"github.com/aashs25/hsbillnradius/internal/repo"
 	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
@@ -34,6 +35,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/service/coasvc"
 	"github.com/aashs25/hsbillnradius/internal/service/customersvc"
 	"github.com/aashs25/hsbillnradius/internal/service/notifysvc"
+	"github.com/aashs25/hsbillnradius/internal/service/paymentsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
 	"github.com/aashs25/hsbillnradius/internal/transport/httpapi"
 )
@@ -107,7 +109,12 @@ func run() error {
 	}
 	notifyService := notifysvc.New(repos, waClients, int32(cfg.Worker.MaxAttempts), log)
 	billingService := billingsvc.New(repos, store, coaService, log).WithNotifier(notifyService)
-	api := httpapi.New(authService, planService, customerService, billingService, notifyService, tokens, log)
+	paymentGateways := map[payment.Provider]payment.Gateway{
+		payment.ProviderMidtrans: payment.NewMidtrans(httpClient),
+		payment.ProviderXendit:   payment.NewXendit(httpClient),
+	}
+	paymentService := paymentsvc.New(repos, store, paymentGateways, coaService, notifyService, log)
+	api := httpapi.New(authService, planService, customerService, billingService, notifyService, paymentService, tokens, log)
 
 	router := newRouter(cfg, log, pool, rdb, api)
 

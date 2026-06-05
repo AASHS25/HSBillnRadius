@@ -79,7 +79,8 @@ func classify(err error) (int, string) {
 		return http.StatusForbidden, "forbidden"
 	case errors.Is(err, iam.ErrUserNotFound), errors.Is(err, tenant.ErrNotFound),
 		errors.Is(err, iam.ErrRoleNotFound), errors.Is(err, plan.ErrNotFound),
-		errors.Is(err, customer.ErrNotFound), errors.Is(err, billing.ErrInvoiceNotFound):
+		errors.Is(err, customer.ErrNotFound), errors.Is(err, billing.ErrInvoiceNotFound),
+		errors.Is(err, billing.ErrPaymentNotFound), errors.Is(err, billing.ErrGatewayNotEnabled):
 		return http.StatusNotFound, "not_found"
 	case errors.Is(err, iam.ErrEmailTaken), errors.Is(err, tenant.ErrSlugTaken),
 		errors.Is(err, plan.ErrNameTaken), errors.Is(err, customer.ErrNoTaken),

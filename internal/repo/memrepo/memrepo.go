@@ -22,58 +22,60 @@ import (
 
 // Store holds all in-memory state and hands out repositories that share it.
 type Store struct {
-	mu        sync.Mutex
-	tenants   map[int64]tenant.Tenant
-	users     map[int64]iam.User
-	roles     map[int64]iam.Role
-	rolePerms map[int64][]string
-	tokens    map[string]iam.RefreshToken
-	audits    []audit.Entry
-	plans     map[int64]plan.Plan
-	bandwidth map[int64]plan.BandwidthProfile // keyed by planID
-	customers map[int64]customer.Customer
-	radcheck  map[string][]radius.Attr
-	radgroup  map[string]radius.UserGroup
-	radreply  map[string][]radius.Attr
-	nas       map[string]radius.Nas // keyed by IP
-	postauth  []radius.PostAuth
-	sessions  map[string]radius.AcctEvent // keyed by uniqueid
-	invoices  map[int64]billing.Invoice
-	items     []billing.InvoiceItem
-	payments  map[string]billing.Payment // keyed by idempotency key
-	ledger    []billing.LedgerEntry
-	notifs    map[int64]notification.Log
-	notifStat map[int64]notification.Status
-	dedup     map[string]bool
-	gateways  map[int64]notification.Gateway   // by tenant
-	templates map[string]notification.Template // tenant|key|channel
-	allPerms  []string
-	seq       map[string]int64
+	mu         sync.Mutex
+	tenants    map[int64]tenant.Tenant
+	users      map[int64]iam.User
+	roles      map[int64]iam.Role
+	rolePerms  map[int64][]string
+	tokens     map[string]iam.RefreshToken
+	audits     []audit.Entry
+	plans      map[int64]plan.Plan
+	bandwidth  map[int64]plan.BandwidthProfile // keyed by planID
+	customers  map[int64]customer.Customer
+	radcheck   map[string][]radius.Attr
+	radgroup   map[string]radius.UserGroup
+	radreply   map[string][]radius.Attr
+	nas        map[string]radius.Nas // keyed by IP
+	postauth   []radius.PostAuth
+	sessions   map[string]radius.AcctEvent // keyed by uniqueid
+	invoices   map[int64]billing.Invoice
+	items      []billing.InvoiceItem
+	payments   map[string]billing.Payment // keyed by idempotency key
+	ledger     []billing.LedgerEntry
+	notifs     map[int64]notification.Log
+	notifStat  map[int64]notification.Status
+	dedup      map[string]bool
+	gateways   map[int64]notification.Gateway   // by tenant
+	templates  map[string]notification.Template // tenant|key|channel
+	pgGateways map[string]billing.GatewayConfig // tenant|provider
+	allPerms   []string
+	seq        map[string]int64
 }
 
 // New returns an empty Store seeded with a default permission catalog.
 func New() *Store {
 	return &Store{
-		tenants:   map[int64]tenant.Tenant{},
-		users:     map[int64]iam.User{},
-		roles:     map[int64]iam.Role{},
-		rolePerms: map[int64][]string{},
-		tokens:    map[string]iam.RefreshToken{},
-		plans:     map[int64]plan.Plan{},
-		bandwidth: map[int64]plan.BandwidthProfile{},
-		customers: map[int64]customer.Customer{},
-		radcheck:  map[string][]radius.Attr{},
-		radgroup:  map[string]radius.UserGroup{},
-		radreply:  map[string][]radius.Attr{},
-		nas:       map[string]radius.Nas{},
-		sessions:  map[string]radius.AcctEvent{},
-		invoices:  map[int64]billing.Invoice{},
-		payments:  map[string]billing.Payment{},
-		notifs:    map[int64]notification.Log{},
-		notifStat: map[int64]notification.Status{},
-		dedup:     map[string]bool{},
-		gateways:  map[int64]notification.Gateway{},
-		templates: map[string]notification.Template{},
+		tenants:    map[int64]tenant.Tenant{},
+		users:      map[int64]iam.User{},
+		roles:      map[int64]iam.Role{},
+		rolePerms:  map[int64][]string{},
+		tokens:     map[string]iam.RefreshToken{},
+		plans:      map[int64]plan.Plan{},
+		bandwidth:  map[int64]plan.BandwidthProfile{},
+		customers:  map[int64]customer.Customer{},
+		radcheck:   map[string][]radius.Attr{},
+		radgroup:   map[string]radius.UserGroup{},
+		radreply:   map[string][]radius.Attr{},
+		nas:        map[string]radius.Nas{},
+		sessions:   map[string]radius.AcctEvent{},
+		invoices:   map[int64]billing.Invoice{},
+		payments:   map[string]billing.Payment{},
+		notifs:     map[int64]notification.Log{},
+		notifStat:  map[int64]notification.Status{},
+		dedup:      map[string]bool{},
+		gateways:   map[int64]notification.Gateway{},
+		templates:  map[string]notification.Template{},
+		pgGateways: map[string]billing.GatewayConfig{},
 		allPerms: []string{
 			"tenant.read", "tenant.update", "user.read", "user.create",
 			"role.manage", "plan.manage", "customer.create", "customer.read",

@@ -116,6 +116,12 @@ type BillingRepository interface {
 	AddLedger(ctx context.Context, e billing.LedgerEntry) (billing.LedgerEntry, error)
 	SumLedger(ctx context.Context, tenantID int64, from, to time.Time) (income, expense int64, err error)
 	Outstanding(ctx context.Context, tenantID int64) (int64, error)
+	GetPaymentByRef(ctx context.Context, ref string) (billing.Payment, error)
+	SettlePayment(ctx context.Context, id int64, raw []byte) error
+	MarkPaymentStatus(ctx context.Context, id int64, status billing.PaymentStatus, raw []byte) error
+	ListPendingGatewayPayments(ctx context.Context, olderThan time.Time, limit int32) ([]billing.Payment, error)
+	GetGatewayConfig(ctx context.Context, tenantID int64, provider string) (billing.GatewayConfig, error)
+	UpsertGatewayConfig(ctx context.Context, cfg billing.GatewayConfig) (billing.GatewayConfig, error)
 }
 
 // RadiusAuthRepository is the read side used by the radius-service during

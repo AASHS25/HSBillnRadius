@@ -2,6 +2,7 @@ package repo
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -243,4 +244,72 @@ func (r *billingRepo) Outstanding(ctx context.Context, tenantID int64) (int64, e
 		return 0, fmt.Errorf("sum outstanding: %w", err)
 	}
 	return n, nil
+}
+
+func (r *billingRepo) GetPaymentByRef(ctx context.Context, ref string) (billing.Payment, error) {
+	m, err := r.q.GetPaymentByGatewayRef(ctx, pgTextOrNull(ref))
+	if err != nil {
+		if isNotFound(err) {
+			return billing.Payment{}, billing.ErrPaymentNotFound
+		}
+		return billing.Payment{}, fmt.Errorf("get payment by ref: %w", err)
+	}
+	return toDomainPayment(m), nil
+}
+
+func (r *billingRepo) SettlePayment(ctx context.Context, id int64, raw []byte) error {
+	if err := r.q.SettlePayment(ctx, sqlc.SettlePaymentParams{ID: id, RawCallback: jsonOrEmpty(raw)}); err != nil {
+		return fmt.Errorf("settle payment: %w", err)
+	}
+	return nil
+}
+
+func (r *billingRepo) MarkPaymentStatus(ctx context.Context, id int64, status billing.PaymentStatus, raw []byte) error {
+	if err := r.q.MarkPaymentStatus(ctx, sqlc.MarkPaymentStatusParams{
+		ID: id, Status: sqlc.PaymentStatus(status), RawCallback: jsonOrEmpty(raw),
+	}); err != nil {
+		return fmt.Errorf("mark payment status: %w", err)
+	}
+	return nil
+}
+
+func (r *billingRepo) ListPendingGatewayPayments(ctx context.Context, olderThan time.Time, limit int32) ([]billing.Payment, error) {
+	rows, err := r.q.ListPendingGatewayPayments(ctx, sqlc.ListPendingGatewayPaymentsParams{CreatedAt: olderThan, Limit: limit})
+	if err != nil {
+		return nil, fmt.Errorf("list pending gateway payments: %w", err)
+	}
+	out := make([]billing.Payment, len(rows))
+	for i, m := range rows {
+		out[i] = toDomainPayment(m)
+	}
+	return out, nil
+}
+
+func (r *billingRepo) GetGatewayConfig(ctx context.Context, tenantID int64, provider string) (billing.GatewayConfig, error) {
+	m, err := r.q.GetPaymentGateway(ctx, sqlc.GetPaymentGatewayParams{TenantID: tenantID, Provider: sqlc.PgProvider(provider)})
+	if err != nil {
+		if isNotFound(err) {
+			return billing.GatewayConfig{}, billing.ErrGatewayNotEnabled
+		}
+		return billing.GatewayConfig{}, fmt.Errorf("get gateway config: %w", err)
+	}
+	config := map[string]string{}
+	_ = json.Unmarshal(m.Config, &config)
+	return billing.GatewayConfig{
+		ID: m.ID, TenantID: m.TenantID, Provider: string(m.Provider), Config: config,
+		IsActive: m.IsActive, IsProduction: m.IsProduction,
+	}, nil
+}
+
+func (r *billingRepo) UpsertGatewayConfig(ctx context.Context, cfg billing.GatewayConfig) (billing.GatewayConfig, error) {
+	config, _ := json.Marshal(cfg.Config)
+	m, err := r.q.UpsertPaymentGateway(ctx, sqlc.UpsertPaymentGatewayParams{
+		TenantID: cfg.TenantID, Provider: sqlc.PgProvider(cfg.Provider), Config: config,
+		IsActive: cfg.IsActive, IsProduction: cfg.IsProduction,
+	})
+	if err != nil {
+		return billing.GatewayConfig{}, fmt.Errorf("upsert gateway config: %w", err)
+	}
+	cfg.ID = m.ID
+	return cfg, nil
 }

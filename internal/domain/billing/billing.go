@@ -67,13 +67,26 @@ const (
 
 // Domain errors.
 var (
-	ErrInvoiceNotFound  = errors.New("invoice not found")
-	ErrInvoiceExists    = errors.New("invoice already exists for period")
-	ErrInvalidStatus    = errors.New("invalid invoice status transition")
-	ErrAlreadyPaid      = errors.New("invoice already paid")
-	ErrPaymentNotUnique = errors.New("duplicate payment idempotency key")
-	ErrAmountMismatch   = errors.New("payment amount does not cover invoice total")
+	ErrInvoiceNotFound    = errors.New("invoice not found")
+	ErrInvoiceExists      = errors.New("invoice already exists for period")
+	ErrInvalidStatus      = errors.New("invalid invoice status transition")
+	ErrAlreadyPaid        = errors.New("invoice already paid")
+	ErrPaymentNotUnique   = errors.New("duplicate payment idempotency key")
+	ErrAmountMismatch     = errors.New("payment amount does not cover invoice total")
+	ErrPaymentNotFound    = errors.New("payment not found")
+	ErrGatewayNotEnabled  = errors.New("payment gateway not configured")
+	ErrCallbackUnverified = errors.New("payment callback signature invalid")
 )
+
+// GatewayConfig is a tenant's payment-gateway credentials.
+type GatewayConfig struct {
+	ID           int64
+	TenantID     int64
+	Provider     string
+	Config       map[string]string
+	IsActive     bool
+	IsProduction bool
+}
 
 // Invoice is a customer bill.
 type Invoice struct {
