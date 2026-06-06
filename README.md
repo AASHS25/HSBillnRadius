@@ -120,6 +120,21 @@ curl -X POST $B/nas -H "Authorization: Bearer $ACC" -H 'Content-Type: applicatio
 Arahkan RADIUS client MikroTik ke `<host>:1812/1813` dengan secret yang
 didaftarkan, set PPPoE pakai RADIUS — pelanggan langsung bisa auth.
 
+### Production (server + HTTPS)
+
+```bash
+cp deploy/.env.example deploy/.env        # isi JWT_SECRET (openssl rand -base64 48), password DB, dst.
+cp deploy/Caddyfile.example deploy/Caddyfile  # ganti domain
+docker compose --env-file deploy/.env \
+  -f deploy/docker-compose.yml -f deploy/docker-compose.prod.yml \
+  --profile app up --build -d
+```
+
+Override `docker-compose.prod.yml`: `APP_ENV=production` + secret dari `.env`,
+Postgres/Redis **tidak** diekspos ke host, API di belakang **Caddy** (HTTPS
+auto Let's Encrypt), `restart: unless-stopped`. Buka firewall hanya untuk
+`80/443/tcp` (web) dan `1812/1813/udp` (+ `3799/udp` CoA) ke radius.
+
 ## Perintah Make
 
 ```bash

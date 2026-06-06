@@ -1,0 +1,14 @@
+# Copy to deploy/Caddyfile and replace billing.example.com with your domain.
+# Caddy auto-provisions and renews Let's Encrypt TLS certificates.
+#
+# RADIUS (UDP 1812/1813) and CoA (UDP 3799) are NOT proxied here — those are
+# UDP and must be reachable directly by your NAS/MikroTik (open the firewall
+# to the radius container's published UDP ports).
+
+billing.example.com {
+	encode zstd gzip
+	reverse_proxy api:8080
+
+	# Pass the real client IP so the app's rate-limiter keys correctly.
+	header_up X-Forwarded-For {remote_host}
+}

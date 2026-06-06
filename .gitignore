@@ -7,6 +7,7 @@
 .env
 .env.*
 !configs/.env.example
+!deploy/.env.example
 
 # Coverage
 coverage.out
