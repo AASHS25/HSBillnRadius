@@ -21,6 +21,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/service/authsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/billingsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/customersvc"
+	"github.com/aashs25/hsbillnradius/internal/service/nassvc"
 	"github.com/aashs25/hsbillnradius/internal/service/notifysvc"
 	"github.com/aashs25/hsbillnradius/internal/service/paymentsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
@@ -41,6 +42,7 @@ type API struct {
 	tickets   *ticketsvc.Service
 	acs       *acssvc.Service
 	reseller  *resellersvc.Service
+	nas       *nassvc.Service
 	limiter   ratelimit.Limiter
 	tokens    *token.Manager
 	valid     *validator.Validate
@@ -48,7 +50,7 @@ type API struct {
 }
 
 // New builds the API delivery layer.
-func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, vouchers *vouchersvc.Service, tickets *ticketsvc.Service, acs *acssvc.Service, reseller *resellersvc.Service, limiter ratelimit.Limiter, tokens *token.Manager, log *slog.Logger) *API {
+func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.Service, billing *billingsvc.Service, notify *notifysvc.Service, payments *paymentsvc.Service, vouchers *vouchersvc.Service, tickets *ticketsvc.Service, acs *acssvc.Service, reseller *resellersvc.Service, nas *nassvc.Service, limiter ratelimit.Limiter, tokens *token.Manager, log *slog.Logger) *API {
 	return &API{
 		auth:      auth,
 		plans:     plans,
@@ -60,6 +62,7 @@ func New(auth *authsvc.Service, plans *plansvc.Service, customers *customersvc.S
 		tickets:   tickets,
 		acs:       acs,
 		reseller:  reseller,
+		nas:       nas,
 		limiter:   limiter,
 		tokens:    tokens,
 		valid:     validator.New(validator.WithRequiredStructEnabled()),
@@ -142,6 +145,12 @@ func (a *API) Mount(r chi.Router) {
 				r.Post("/{id}/transition", a.handleTransitionTicket)
 			})
 			r.With(RequirePermission("customer.read", a.log)).Get("/maps/customers.geojson", a.handleMapsGeoJSON)
+
+			r.Route("/nas", func(r chi.Router) {
+				r.Use(RequirePermission("tenant.update", a.log))
+				r.Post("/", a.handleCreateNas)
+				r.Get("/", a.handleListNas)
+			})
 
 			r.Route("/reseller", func(r chi.Router) {
 				r.Use(RequirePermission("payment.manage", a.log))

@@ -1391,3 +1391,15 @@ func (r *resellerRepo) ListCommissions(_ context.Context, tenantID, resellerID i
 	}
 	return page(out, limit, offset), nil
 }
+
+func (r *radiusAuthRepo) ListNas(_ context.Context, tenantID int64) ([]radius.Nas, error) {
+	r.s.mu.Lock()
+	defer r.s.mu.Unlock()
+	var out []radius.Nas
+	for _, n := range r.s.nas {
+		if n.TenantID == tenantID {
+			out = append(out, n)
+		}
+	}
+	return out, nil
+}

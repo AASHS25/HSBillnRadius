@@ -83,6 +83,43 @@ curl -s localhost:8080/healthz   # {"status":"ok"}
 curl -s localhost:8080/readyz    # cek Postgres + Redis
 ```
 
+## Deploy semua service (Docker)
+
+Seluruh stack (api + radius + worker + scheduler + PostgreSQL + Redis) jalan
+lewat satu perintah. Migrasi DB dijalankan otomatis oleh service `migrate`
+(app service lain menunggu sampai selesai). Build **hermetik & offline** dari
+`vendor/` (tidak butuh akses proxy Go saat build image).
+
+```bash
+# Build image semua binary + jalankan seluruh stack
+docker compose -f deploy/docker-compose.yml --profile app up --build -d
+
+# Cek
+curl -s localhost:8080/readyz          # {"status":"ready","checks":{"postgres":"up","redis":"up"}}
+docker compose -f deploy/docker-compose.yml --profile app ps
+```
+
+Port yang diekspos: `8080` (API), `1812/udp` (RADIUS auth), `1813/udp`
+(accounting). CoA/Disconnect ke NAS lewat `3799/udp`.
+
+### Onboarding pertama (siap pakai)
+
+```bash
+B=localhost:8080/api/v1
+# 1. Daftar tenant + admin (self-service)
+ACC=$(curl -s -X POST $B/auth/register -H 'Content-Type: application/json' \
+  -d '{"tenant_name":"ISP Saya","tenant_slug":"isp","name":"Admin","email":"admin@isp.id","password":"rahasia12"}' \
+  | python3 -c 'import sys,json;print(json.load(sys.stdin)["access_token"])')
+# 2. Daftarkan router MikroTik (NAS) + shared secret  ← WAJIB agar RADIUS jalan
+curl -X POST $B/nas -H "Authorization: Bearer $ACC" -H 'Content-Type: application/json' \
+  -d '{"nasname":"10.10.10.1","shortname":"mikrotik-pop1","secret":"radsecret123"}'
+# 3. Buat paket PPPoE → otomatis sync radgroupreply (Mikrotik-Rate-Limit)
+# 4. Buat pelanggan PPPoE → otomatis provisioning radcheck + radusergroup
+```
+
+Arahkan RADIUS client MikroTik ke `<host>:1812/1813` dengan secret yang
+didaftarkan, set PPPoE pakai RADIUS — pelanggan langsung bisa auth.
+
 ## Perintah Make
 
 ```bash
@@ -115,6 +152,7 @@ Semua di bawah `/api/v1`. Auth pakai `Authorization: Bearer <access_token>`.
 | POST | `/auth/refresh` | - | Rotasi refresh token (deteksi reuse) |
 | POST | `/auth/logout` | - | Revoke refresh token |
 | GET | `/me` | Bearer | Profil user + tenant + permissions |
+| POST/GET | `/nas` | `tenant.update` | Daftar/registrasi router (NAS) + secret |
 | GET | `/users` | `user.read` | Daftar user (tenant-scoped, paginated) |
 | GET | `/audit-logs` | `tenant.read` | Audit log tenant |
 | CRUD | `/plans` | `plan.manage` | Paket + bandwidth profile → sync radgroupreply |

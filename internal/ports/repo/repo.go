@@ -152,6 +152,7 @@ type RadiusAuthRepository interface {
 	UserReply(ctx context.Context, tenantID int64, username string) ([]radius.Attr, error)
 	GroupReply(ctx context.Context, tenantID int64, groupname string) ([]radius.Attr, error)
 	InsertPostAuth(ctx context.Context, pa radius.PostAuth) error
+	ListNas(ctx context.Context, tenantID int64) ([]radius.Nas, error)
 }
 
 // AccountingRepository writes radacct and reads active sessions.

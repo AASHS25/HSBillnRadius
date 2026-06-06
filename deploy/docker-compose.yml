@@ -35,6 +35,22 @@ services:
   # start under the "app" profile: `docker compose --profile app up --build`.
   # Dev infra above starts by default with `docker compose up -d postgres redis`.
   # ----------------------------------------------------------------------------
+  # Runs migrations once, then exits. App services wait for it to finish.
+  migrate:
+    profiles: ["app"]
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      args:
+        SERVICE: migrate
+    command: ["up"]
+    environment:
+      POSTGRES_DSN: postgres://postgres:postgres@postgres:5432/billing_radius?sslmode=disable
+      REDIS_ADDR: redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   api:
     profiles: ["app"]
     build:
@@ -53,6 +69,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   radius:
     profiles: ["app"]
@@ -73,6 +91,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   worker:
     profiles: ["app"]
@@ -90,6 +110,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
   scheduler:
     profiles: ["app"]
@@ -107,6 +129,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:

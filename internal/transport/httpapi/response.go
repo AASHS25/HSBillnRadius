@@ -12,6 +12,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/domain/customer"
 	"github.com/aashs25/hsbillnradius/internal/domain/iam"
 	"github.com/aashs25/hsbillnradius/internal/domain/plan"
+	"github.com/aashs25/hsbillnradius/internal/domain/radius"
 	"github.com/aashs25/hsbillnradius/internal/domain/reseller"
 	"github.com/aashs25/hsbillnradius/internal/domain/tenant"
 	"github.com/aashs25/hsbillnradius/internal/domain/ticket"
@@ -90,7 +91,8 @@ func classify(err error) (int, string) {
 	case errors.Is(err, iam.ErrEmailTaken), errors.Is(err, tenant.ErrSlugTaken),
 		errors.Is(err, plan.ErrNameTaken), errors.Is(err, customer.ErrNoTaken),
 		errors.Is(err, customer.ErrUsernameTaken), errors.Is(err, billing.ErrInvoiceExists),
-		errors.Is(err, billing.ErrAlreadyPaid), errors.Is(err, billing.ErrPaymentNotUnique):
+		errors.Is(err, billing.ErrAlreadyPaid), errors.Is(err, billing.ErrPaymentNotUnique),
+		errors.Is(err, radius.ErrNasExists):
 		return http.StatusConflict, "conflict"
 	case errors.Is(err, billing.ErrInvalidStatus), errors.Is(err, ticket.ErrInvalidStatus),
 		errors.Is(err, ticket.ErrInvalidTicket):

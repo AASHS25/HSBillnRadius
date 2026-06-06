@@ -37,6 +37,7 @@ import (
 	"github.com/aashs25/hsbillnradius/internal/service/billingsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/coasvc"
 	"github.com/aashs25/hsbillnradius/internal/service/customersvc"
+	"github.com/aashs25/hsbillnradius/internal/service/nassvc"
 	"github.com/aashs25/hsbillnradius/internal/service/notifysvc"
 	"github.com/aashs25/hsbillnradius/internal/service/paymentsvc"
 	"github.com/aashs25/hsbillnradius/internal/service/plansvc"
@@ -115,6 +116,7 @@ func run() error {
 	}
 	notifyService := notifysvc.New(repos, waClients, int32(cfg.Worker.MaxAttempts), log)
 	resellerService := resellersvc.New(repos, store, log)
+	nasService := nassvc.New(repos, log)
 	billingService := billingsvc.New(repos, store, coaService, log).WithNotifier(notifyService).WithCommission(cfg.Billing.CommissionRateBps, resellerService)
 	paymentGateways := map[payment.Provider]payment.Gateway{
 		payment.ProviderMidtrans: payment.NewMidtrans(httpClient),
@@ -129,7 +131,7 @@ func run() error {
 	}
 	acsService := acssvc.New(repos, acsClient, log)
 	limiter := ratelimit.NewRedis(rdb)
-	api := httpapi.New(authService, planService, customerService, billingService, notifyService, paymentService, voucherService, ticketService, acsService, resellerService, limiter, tokens, log)
+	api := httpapi.New(authService, planService, customerService, billingService, notifyService, paymentService, voucherService, ticketService, acsService, resellerService, nasService, limiter, tokens, log)
 
 	router := newRouter(cfg, log, pool, rdb, api)
 

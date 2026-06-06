@@ -86,3 +86,15 @@ func (r *radiusAuthRepo) InsertPostAuth(ctx context.Context, pa radius.PostAuth)
 	}
 	return nil
 }
+
+func (r *radiusAuthRepo) ListNas(ctx context.Context, tenantID int64) ([]radius.Nas, error) {
+	rows, err := r.q.ListNasByTenant(ctx, tenantID)
+	if err != nil {
+		return nil, fmt.Errorf("list nas: %w", err)
+	}
+	out := make([]radius.Nas, len(rows))
+	for i, m := range rows {
+		out[i] = radius.Nas{ID: m.ID, TenantID: m.TenantID, Name: m.Nasname, Shortname: m.Shortname, Secret: m.Secret}
+	}
+	return out, nil
+}
